@@ -22,8 +22,7 @@ def create_pinpoint() -> str:
         logging.error(e.response['Error']['Message'])
     else:
         success_msg = "Pinpoint App Created."
-        logging.debug(success_msg)
-        print(success_msg)  
+        logging.info(success_msg)
         # return the application ID for further modification.    
         return applicationID        
 
@@ -42,7 +41,7 @@ def enable_pinpoint_SMS(applicationID: str) -> None:
         logging.error(e.response['Error']['Message'])
     else:
         success_msg = "SMS Channel Enabled."
-        logging.debug(success_msg)
+        logging.info(success_msg)
         print(success_msg)
 
 

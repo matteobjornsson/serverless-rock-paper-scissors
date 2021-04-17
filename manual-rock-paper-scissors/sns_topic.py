@@ -20,7 +20,7 @@ def create_topic(topic_name: str) -> sns.Topic:
         logging.error(e.response['Error']['Message'])
     else:
         success_msg = "SNS Topic Created."
-        logging.debug(success_msg)
+        logging.info(success_msg)
         print(success_msg)
         return topic
 
@@ -39,7 +39,7 @@ def add_policy_statement(topic: sns.Topic, policy_statement: dict) -> None:
         logging.error(e.response['Error']['Message'])
     else:
         success_msg = "SNS Policy Updated."
-        logging.debug(success_msg)
+        logging.info(success_msg)
         print(success_msg)
 
 if __name__ == '__main__':
