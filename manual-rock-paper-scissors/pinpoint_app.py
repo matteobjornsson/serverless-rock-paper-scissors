@@ -19,8 +19,9 @@ try:
 except ClientError as e:
     logging.error(e.response['Error']['Message'])
 else:
-    logging.debug("SMS channel enabled.")
-    print("Pinpoint App Created ")
+    success_msg = "Pinpoint App Created."
+    logging.debug(success_msg)
+    print(success_msg)
 
 # grab the application ID from the 
 applicationID = response['ApplicationResponse']['Id']
@@ -38,7 +39,8 @@ try:
 except ClientError as e:
     logging.error(e.response['Error']['Message'])
 else:
-    logging.debug("SMS channel enabled.")
-    print("SMS channel enabled ")
+    success_msg = "SMS Channel Enabled."
+    logging.debug(success_msg)
+    print(success_msg)
 
 
