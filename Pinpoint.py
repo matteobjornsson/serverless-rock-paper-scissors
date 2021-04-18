@@ -15,15 +15,14 @@ def create_pinpoint_app(app_name: str) -> str:
         response = pinpoint_client.create_app(
             CreateApplicationRequest={"Name": app_name, "tags": {}}
         )
-        # grab the application ID to return.
-        applicationID = response["ApplicationResponse"]["Id"]
     except ClientError as e:
         logging.error(e.response["Error"]["Message"])
     else:
-        success_msg = "Pinpoint App Created."
-        logging.info(success_msg)
+        # grab the application ID to return.
+        application_id = response["ApplicationResponse"]["Id"]
+        logging.info("Pinpoint App Created %s.", application_id)
         # return the application ID for further modification.
-        return applicationID
+        return application_id
 
 
 def delete_pinpoint_app(application_id: str) -> dict:
@@ -33,26 +32,19 @@ def delete_pinpoint_app(application_id: str) -> dict:
     except ClientError as e:
         logging.error(e.response["Error"]["Message"])
     else:
-        success_msg = "Pinpoint App Deleted."
-        logging.info(success_msg)
+        logging.info("Pinpoint App Deleted %s.", application_id)
         return response
+
 
 
 def enable_pinpoint_SMS(applicationID: str) -> dict:
     # enable SMS channel on Pinpoint app
     try:
         response = pinpoint_client.update_sms_channel(
-            ApplicationId=applicationID,
-            SMSChannelRequest={
-                "Enabled": True
-                # 'SenderId': 'string',
-                # 'ShortCode': 'string'
-            },
+            ApplicationId=applicationID, SMSChannelRequest={"Enabled": True}
         )
     except ClientError as e:
         logging.error(e.response["Error"]["Message"])
     else:
-        success_msg = "SMS Channel Enabled."
-        logging.info(success_msg)
-        print(success_msg)
+        logging.info("Pinpoint SMS Enabled %s.", str(response))
         return response
