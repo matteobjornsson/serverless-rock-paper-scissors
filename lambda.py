@@ -7,7 +7,7 @@ import json
 import boto3
 from botocore.exceptions import ClientError
 import logging
-logging.basicConfig(filename='rps.log', level=logging.DEBUG)
+logging.basicConfig(filename='rps.log', level=logging.INFO)
 
 
 lambda_function_filename = 'lambda_function_handler.py'

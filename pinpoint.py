@@ -1,7 +1,7 @@
 import boto3
 from botocore.exceptions import ClientError
 import logging
-logging.basicConfig(filename='rps.log', level=logging.DEBUG)
+logging.basicConfig(filename='rps.log', level=logging.INFO)
 
 region = "us-east-1"
 
