@@ -1,15 +1,19 @@
 # file contents adapted from AWS example
 # https://docs.aws.amazon.com/code-samples/latest/catalog/python-lambda-boto_client_examples-lambda_basics.py.html
 
-from zipfile import ZipFile
 import io
+import time
 import IAm
 import boto3
+from zipfile import ZipFile
 from botocore.exceptions import ClientError
 import logging
 logging.basicConfig(filename='rps.log', level=logging.INFO)
 
 lambda_client = boto3.client('lambda')
+retry_backoff = 2
+initial_wait = 1
+max_wait = 9 # only wait < 9s for funciton creation before giving up. 
 
 # zip a given file, return file as bytes
 def zip_lambda_code(file_name: str) -> bytes:
@@ -24,23 +28,31 @@ def zip_lambda_code(file_name: str) -> bytes:
 
 
 def create_lambda_function(function_name: str, description: str, handler_name: str, iam_role, code_bytes):
-    try:
-        response = lambda_client.create_function(
-            FunctionName=function_name,
-            Description=description,
-            Runtime='python3.8',
-            Role=iam_role.arn,
-            Handler=handler_name,
-            Code={'ZipFile': code_bytes},
-            Publish=True)
-        function_arn = response['FunctionArn']
-        logging.info("Created function '%s' with ARN: '%s'.",
-                    function_name, response['FunctionArn'])
-    except ClientError:
-        logging.exception("Couldn't create function %s.", function_name)
-        raise
-    else:
-        return function_arn
+    delay = initial_wait
+    # add in exponential backoff waiting for AWS services (iam_role) to deploy and connect
+    while delay < max_wait:
+        try:
+            response = lambda_client.create_function(
+                FunctionName=function_name,
+                Description=description,
+                Runtime='python3.8',
+                Role=iam_role.arn,
+                Handler=handler_name,
+                Code={'ZipFile': code_bytes},
+                Publish=True)
+            function_arn = response['FunctionArn']
+            logging.info("Created function '%s' with ARN: '%s'.",
+                        function_name, response['FunctionArn'])
+        except ClientError as e:
+            logging.info("Waiting for resources to connect...")
+            print("Waiting for resources to connect...")
+            time.sleep(delay)
+            delay = delay*retry_backoff
+        else:
+            return function_arn
+    logging.exception("Couldn't create function %s.", function_name)
+    raise ClientError(e)
+    
 
 def add_permission(action: str, function_name: str, principal: str, source_arn: str, statement_id: str) -> None:
     try:
@@ -61,10 +73,10 @@ def add_permission(action: str, function_name: str, principal: str, source_arn: 
 
 if __name__ == '__main__':
 
-    lambda_function_filename = 'lambda_function_handler.py'
+    lambda_function_filename = '/home/matteo/repos/serverless-rock-paper-scissors/lambda_function_handler.py'
     lambda_handler_name = 'lambda_function_handler.lambda_handler'
-    lambda_role_name = 'rps-lambda-role'
-    lambda_function_name = 'rps-lambda-function'
+    lambda_role_name = 'rps-lambda-role222'
+    lambda_function_name = 'rps-lambda-function222'
 
     iam_role = IAm.create_iam_role(lambda_role_name)
     function_code = zip_lambda_code(lambda_function_filename)
