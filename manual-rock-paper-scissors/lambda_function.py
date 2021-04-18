@@ -1,7 +1,13 @@
+# file contents adapted from AWS example
+# https://docs.aws.amazon.com/code-samples/latest/catalog/python-lambda-boto_client_examples-lambda_basics.py.html
+
 from zipfile import ZipFile
 import io
+import json
 import boto3
-
+from botocore.exceptions import ClientError
+import logging
+logging.basicConfig(filename='lambda.log', level=logging.DEBUG)
 
 
 lambda_function_filename = 'lambda_function_handler.py'
@@ -15,11 +21,73 @@ lambda_client = boto3.client('lambda')
 # zip a given file, return file as bytes
 def zip_file(file_name: str) -> bytes:
     # buffer the zip file contents as a BytesIO object
-    zip_package = io.BytesIO()
-    with ZipFile(zip_package, 'w') as zip:
+    bytes_buffer = io.BytesIO()
+    with ZipFile(bytes_buffer, 'w') as zip:
         # write the file to the buffer
         zip.write(file_name)
     # return the file position to the start (otherwise 'read()' returns nothing)
-    zip_package.seek(0)
-    return zip_package.read()
+    bytes_buffer.seek(0)
+    return bytes_buffer.read()
 
+
+def create_iam_role(iam_resource, iam_role_name): # return iam role object
+    lambda_assume_role_policy = {
+        'Version': '2012-10-17',
+        'Statement': [
+            {
+                'Effect': 'Allow',
+                'Principal': {
+                    'Service': 'lambda.amazonaws.com'
+                },
+                'Action': 'sts:AssumeRole'
+            }
+        ]
+    }
+    policy_arn = 'arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole'
+    try:
+        role = iam_resource.create_role(
+            RoleName=iam_role_name,
+            AssumeRolePolicyDocument=json.dumps(lambda_assume_role_policy))
+        iam_resource.meta.client.get_waiter('role_exists').wait(RoleName=iam_role_name)
+        logging.info("Created role %s.", role.name)
+
+        role.attach_policy(PolicyArn=policy_arn)
+        logging.info("Attached basic execution policy to role %s.", role.name)
+    except ClientError as error:
+        if error.response['Error']['Code'] == 'EntityAlreadyExists':
+            role = iam_resource.Role(iam_role_name)
+            logging.warning("The role %s already exists. Using it.", iam_role_name)
+        else:
+            logging.exception(
+                "Couldn't create role %s or attach policy %s.",
+                iam_role_name, policy_arn)
+            raise
+    return role
+
+def deploy_lambda_function(lambda_client, function_name: str, handler_name: str, iam_role, code_bytes):
+    try:
+        response = lambda_client.create_function(
+            FunctionName=function_name,
+            Description="Rock Paper Scissors lambda function",
+            Runtime='python3.8',
+            Role=iam_role.arn,
+            Handler=handler_name,
+            Code={'ZipFile': code_bytes},
+            Publish=True)
+        function_arn = response['FunctionArn']
+        logging.info("Created function '%s' with ARN: '%s'.",
+                    function_name, response['FunctionArn'])
+    except ClientError:
+        logging.exception("Couldn't create function %s.", function_name)
+        raise
+    else:
+        return function_arn
+
+
+
+
+if __name__ == '__main__':
+    iam_role = create_iam_role(iam_resource, lambda_role_name)
+    function_code = zip_file(lambda_function_filename)
+    deploy_lambda_function(lambda_client, lambda_function_name, lambda_handler_name, iam_role, function_code)
+    print("made it")
