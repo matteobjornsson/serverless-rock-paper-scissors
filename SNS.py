@@ -25,6 +25,15 @@ def create_topic(topic_name: str) -> sns.Topic:
         print(success_msg)
         return topic
 
+def delete_topic(topic: sns.Topic) -> dict:
+    try:
+        response = topic.delete()
+        logging.info("Deleted topic %s.", topic.arn)
+        return response
+    except ClientError:
+        logging.error("Couldn't delete topic %s.", topic.arn)
+        
+
 def add_policy_statement(topic: sns.Topic, policy_statement: dict) -> None:
     # grab current policy
     policy = json.loads(topic.attributes['Policy'])
