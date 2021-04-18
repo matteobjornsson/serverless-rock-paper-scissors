@@ -29,9 +29,12 @@ def create_iam_role(iam_role_name): # return iam role object
             AssumeRolePolicyDocument=json.dumps(lambda_assume_role_policy))
         iam_resource.meta.client.get_waiter('role_exists').wait(RoleName=iam_role_name)
         logging.info("Created role %s.", role.name)
+        print("IAM: Created role %s.", role.name)
 
         role.attach_policy(PolicyArn=policy_arn)
         logging.info("Attached basic execution policy to role %s.", role.name)
+        print("IAM: Attached basic execution policy to role %s.", role.name)
+
     except ClientError as error:
         if error.response['Error']['Code'] == 'EntityAlreadyExists':
             role = iam_resource.Role(iam_role_name)
@@ -43,6 +46,6 @@ def create_iam_role(iam_role_name): # return iam role object
             raise
     return role
 
-if __name__ == '__main__':
-    lambda_role_name = 'rps-lambda-role'
-    new_role = create_iam_role(lambda_role_name)
+# if __name__ == '__main__':
+    # lambda_role_name = 'rps-lambda-role'
+    # new_role = create_iam_role(lambda_role_name)
