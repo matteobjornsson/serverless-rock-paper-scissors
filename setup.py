@@ -1,4 +1,7 @@
 import IAm, Lambda, Pinpoint, SNS
+import logging
+
+logging.basicConfig(filename="rps.log", level=logging.INFO)
 
 # service names and parameters
 # sns_incoming_SMS_topic_name = 'rps_incoming_sms'
@@ -17,6 +20,7 @@ lambda_role_name = "rps-lambda-role_test"
 lambda_function_name = "rps-lambda-function_test"
 lamda_function_description = "Rock Paper Scissors lambda function_test"
 pinpoint_app_name = "rock_paper_scissors_test"
+teardown = True
 
 ########
 # SNS  #
@@ -69,3 +73,10 @@ input(
 print("Instructions here to play the game")
 
 # TODO: add flag to delete all created resources
+
+if teardown:
+    SNS.delete_topic(sns_topic)
+    IAm.delete_role(iam_role)
+    Lambda.delete_lambda_function(lambda_function_name)
+    Pinpoint.delete_pinpoint_app(pinpoint_app_id)
+    logging.info("Service teardown complete")
