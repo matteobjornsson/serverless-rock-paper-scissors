@@ -27,7 +27,7 @@ def zip_lambda_code(file_name: str) -> bytes:
     return bytes_buffer.read()
 
 
-def create_lambda_function(function_name: str, description: str, handler_name: str, iam_role, code_bytes):
+def create_lambda_function(function_name: str, description: str, handler_name: str, iam_role, code_bytes: bytes):
     delay = initial_wait
     # add in exponential backoff waiting for AWS services (iam_role) to deploy and connect
     while delay < max_wait:
@@ -50,8 +50,49 @@ def create_lambda_function(function_name: str, description: str, handler_name: s
             delay = delay*retry_backoff
         else:
             return function_arn
-    logging.exception("Couldn't create function %s.", function_name)
-    raise ClientError(e)
+    logging.error(e.response['Error']['Message'])
+    logging.error("Couldn't create function %s.", function_name)
+
+
+def delete_lambda_function(function_name: str, version=None) -> dict:
+    try:
+        if (version is not None):
+            response = lambda_client.delete_function(
+                FunctionName=function_name,
+                Qualifier=version
+            )
+        else:
+            response = lambda_client.delete_function(
+                FunctionName=function_name
+            )
+        return response
+    except ClientError as error:
+        logging.error(error.response['Error']['Message'])
+        logging.error("Couldn't delete function %s.", function_name)
+
+
+def update_lambda_code(function_name: str, code_bytes: bytes, publish=True, dryrun=False) -> dict:
+    delay = initial_wait
+    # add in exponential backoff waiting for AWS services (iam_role) to deploy and connect
+    while delay < max_wait:
+        try:
+            response = lambda_client.update_function_code(
+                FunctionName='string',
+                ZipFile=code_bytes,
+                Publish=publish,
+                DryRun=dryrun)
+
+            logging.info("Updated function '%s' with ARN: '%s'.",
+                        function_name, response['FunctionArn'])
+        except ClientError as e:
+            logging.info("Waiting for resources to connect...")
+            print("Waiting for resources to connect...")
+            time.sleep(delay)
+            delay = delay*retry_backoff
+        else:
+            return response
+    logging.error(e.response['Error']['Message'])
+    logging.exception("Couldn't update function %s.", function_name)
     
 
 def add_permission(action: str, function_name: str, principal: str, source_arn: str, statement_id: str) -> None:
