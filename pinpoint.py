@@ -7,12 +7,12 @@ region = "us-east-1"
 
 client = boto3.client('pinpoint',region_name=region)
 
-def create_pinpoint() -> str:
+def create_pinpoint(app_name: str) -> str:
     # create a pinpoint app 'rock_paper_scissors'
     try:                                      
         response = client.create_app(
             CreateApplicationRequest={
-                'Name': 'rock_paper_scissors',
+                'Name': app_name,
                 'tags':{}
             }
         )

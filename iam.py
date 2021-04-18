@@ -1,0 +1,48 @@
+# file contents adapted from AWS example
+# https://docs.aws.amazon.com/code-samples/latest/catalog/python-lambda-boto_client_examples-lambda_basics.py.html
+
+import json
+import boto3
+from botocore.exceptions import ClientError
+import logging
+logging.basicConfig(filename='rps.log', level=logging.INFO)
+
+iam_resource = boto3.resource('iam')
+
+def create_iam_role(iam_role_name): # return iam role object
+    lambda_assume_role_policy = {
+        'Version': '2012-10-17',
+        'Statement': [
+            {
+                'Effect': 'Allow',
+                'Principal': {
+                    'Service': 'lambda.amazonaws.com'
+                },
+                'Action': 'sts:AssumeRole'
+            }
+        ]
+    }
+    policy_arn = 'arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole'
+    try:
+        role = iam_resource.create_role(
+            RoleName=iam_role_name,
+            AssumeRolePolicyDocument=json.dumps(lambda_assume_role_policy))
+        iam_resource.meta.client.get_waiter('role_exists').wait(RoleName=iam_role_name)
+        logging.info("Created role %s.", role.name)
+
+        role.attach_policy(PolicyArn=policy_arn)
+        logging.info("Attached basic execution policy to role %s.", role.name)
+    except ClientError as error:
+        if error.response['Error']['Code'] == 'EntityAlreadyExists':
+            role = iam_resource.Role(iam_role_name)
+            logging.warning("The role %s already exists. Using it.", iam_role_name)
+        else:
+            logging.exception(
+                "Couldn't create role %s or attach policy %s.",
+                iam_role_name, policy_arn)
+            raise
+    return role
+
+if __name__ == '__main__':
+    lambda_role_name = 'rps-lambda-role'
+    new_role = create_iam_role(lambda_role_name)
