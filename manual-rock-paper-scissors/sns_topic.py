@@ -3,7 +3,7 @@ import pprint
 import json
 from botocore.exceptions import ClientError
 import logging
-logging.basicConfig(filename='sns.log', level=logging.DEBUG)
+logging.basicConfig(filename='rps.log', level=logging.DEBUG)
 
 sns = boto3.resource('sns')
 sns_client = boto3.client('sns')
