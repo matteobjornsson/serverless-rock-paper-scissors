@@ -20,7 +20,7 @@ def create_topic(topic_name: str) -> sns.Topic:
     except ClientError as e:
         logging.error(e.response['Error']['Message'])
     else:
-        success_msg = "SNS Topic Created."
+        success_msg = "SNS: Topic Created."
         logging.info(success_msg)
         print(success_msg)
         return topic
@@ -39,7 +39,7 @@ def add_policy_statement(topic: sns.Topic, policy_statement: dict) -> None:
     except ClientError as e:
         logging.error(e.response['Error']['Message'])
     else:
-        success_msg = "SNS Policy Updated."
+        success_msg = "SNS: Policy Updated."
         logging.info(success_msg)
         print(success_msg)
 
