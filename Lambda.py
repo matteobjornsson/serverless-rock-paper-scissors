@@ -30,7 +30,7 @@ def zip_lambda_code(file_name: str) -> bytes:
 
 def create_lambda_function(
     function_name: str, description: str, handler_name: str, iam_role, code_bytes: bytes
-):
+) -> str:
     delay = initial_wait
     # add in exponential backoff waiting for AWS services (iam_role) to deploy and connect
     while delay < max_wait:
