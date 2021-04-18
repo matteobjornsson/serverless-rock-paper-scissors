@@ -83,11 +83,33 @@ def deploy_lambda_function(lambda_client, function_name: str, handler_name: str,
     else:
         return function_arn
 
-
+def add_permission(client, action: str, function_name: str, principal: str, source_arn: str, statement_id: str) -> None:
+    try:
+        response = client.add_permission(
+            Action=action,
+            FunctionName=function_name,
+            Principal=principal,
+            SourceArn=source_arn,
+            StatementId=statement_id,
+        )
+    except ClientError as e:
+        logging.error(e.response['Error']['Message'])
+    else:
+        success_msg = "Lambda Policy Permission Added."
+        logging.info(success_msg)
+        print(success_msg)
 
 
 if __name__ == '__main__':
     iam_role = create_iam_role(iam_resource, lambda_role_name)
     function_code = zip_file(lambda_function_filename)
     deploy_lambda_function(lambda_client, lambda_function_name, lambda_handler_name, iam_role, function_code)
+    add_permission(
+        client=lambda_client,
+        action='lambda:InvokeFunction',
+        function_name=lambda_function_name,
+        principal='sns.amazonaws.com',
+        source_arn='arn:aws:sns:us-east-1:802108040626:rps_incoming_sms',
+        statement_id='sns'
+    )
     print("made it")
