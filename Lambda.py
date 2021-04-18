@@ -3,7 +3,7 @@
 
 from zipfile import ZipFile
 import io
-import iam
+import IAm
 import boto3
 from botocore.exceptions import ClientError
 import logging
@@ -23,7 +23,7 @@ def zip_lambda_code(file_name: str) -> bytes:
     return bytes_buffer.read()
 
 
-def create_lambda_function(lambda_client, function_name: str, description: str, handler_name: str, iam_role, code_bytes):
+def create_lambda_function(function_name: str, description: str, handler_name: str, iam_role, code_bytes):
     try:
         response = lambda_client.create_function(
             FunctionName=function_name,
@@ -42,9 +42,9 @@ def create_lambda_function(lambda_client, function_name: str, description: str, 
     else:
         return function_arn
 
-def add_permission(client, action: str, function_name: str, principal: str, source_arn: str, statement_id: str) -> None:
+def add_permission(action: str, function_name: str, principal: str, source_arn: str, statement_id: str) -> None:
     try:
-        response = client.add_permission(
+        _ = lambda_client.add_permission(
             Action=action,
             FunctionName=function_name,
             Principal=principal,
@@ -66,12 +66,11 @@ if __name__ == '__main__':
     lambda_role_name = 'rps-lambda-role'
     lambda_function_name = 'rps-lambda-function'
 
-    iam_role = iam.create_iam_role(lambda_role_name)
+    iam_role = IAm.create_iam_role(lambda_role_name)
     function_code = zip_lambda_code(lambda_function_filename)
     description = "Rock Paper Scissors lambda function"
-    create_lambda_function(lambda_client, lambda_function_name, description, lambda_handler_name, iam_role, function_code)
+    create_lambda_function(lambda_function_name, description, lambda_handler_name, iam_role, function_code)
     add_permission(
-        client=lambda_client,
         action='lambda:InvokeFunction',
         function_name=lambda_function_name,
         principal='sns.amazonaws.com',
