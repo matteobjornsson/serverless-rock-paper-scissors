@@ -40,11 +40,21 @@ def create_iam_role(iam_role_name): # return iam role object
             role = iam_resource.Role(iam_role_name)
             logging.warning("The role %s already exists. Using it.", iam_role_name)
         else:
-            logging.exception(
+            logging.error(error.response['Error']['Message'])
+            logging.error(
                 "Couldn't create role %s or attach policy %s.",
                 iam_role_name, policy_arn)
-            raise
     return role
+
+def delete_role(iam_role) -> dict:
+    try:
+        for policy in iam_role.attached_policies.all():
+            policy.detach_role(RoleName=iam_role.name)
+        response = iam_role.delete()
+        return response
+    except ClientError as error:
+        logging.error(error.response['Error']['Message'])
+        logging.error("Couldn't delete role %s", iam_role.name)
 
 # if __name__ == '__main__':
     # lambda_role_name = 'rps-lambda-role'
