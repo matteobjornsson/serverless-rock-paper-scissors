@@ -99,6 +99,11 @@ def update_lambda_code(
             print("Waiting for resources to connect...")
             time.sleep(delay)
             delay = delay * retry_backoff
+
+            if delay >= max_wait:
+                logging.error(e.response["Error"]["Message"])
+                logging.error("Couldn't update function %s.", function_name)
+                raise
         else:
             logging.info(
                 "Updated function '%s' with ARN: '%s'.",
@@ -106,9 +111,6 @@ def update_lambda_code(
                 response["FunctionArn"],
             )
             return response
-    logging.error(e.response["Error"]["Message"])
-    logging.exception("Couldn't update function %s.", function_name)
-    raise (e)
 
 
 def add_permission(
