@@ -83,8 +83,6 @@ input(
 )
 print("Instructions here to play the game")
 
-# TODO: add flag to delete all created resources
-
 if teardown:
     SNS.delete_topic(sns_topic)
     IAm.delete_role(iam_role)
