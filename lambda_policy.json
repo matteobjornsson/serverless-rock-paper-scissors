@@ -27,6 +27,12 @@
                 "dynamodb:UpdateItem"
             ],
             "Resource": "*"
+        },
+        {
+            "Sid": "PinpointPublish",
+            "Effect": "Allow",
+            "Action": "mobiletargeting:SendMessages",
+            "Resource": "*"
         }
     ]
 }
