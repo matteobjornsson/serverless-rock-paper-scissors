@@ -1,4 +1,4 @@
-import IAm, Lambda, Pinpoint, SNS, Dynamodb
+from services import IAm, Lambda, Pinpoint, SNS, Dynamodb
 import logging
 import pprint
 
@@ -8,8 +8,8 @@ logging.basicConfig(filename="rps.log", level=logging.INFO)
 sns_incoming_SMS_topic_name = "rps_incoming_sms_test"
 sns_outgoing_SMS_topic_name = "rps_outgoing_sms_test"
 lambda_policy_name = "BasicLambdaExecutionRoleDynamoCRUD"
-lambda_policy_file_name = "lambda_policy.json"
-lambda_assume_role_policy_file_name = "lambda_assume_role_policy.json"
+lambda_policy_file_name = "policy/lambda_policy.json"
+lambda_assume_role_policy_file_name = "policy/lambda_assume_role_policy.json"
 lambda_function_filename = "lambda_function_handler.py"
 lambda_handler_name = "lambda_function_handler.lambda_handler"
 lambda_role_name = "rps-lambda-role_test"

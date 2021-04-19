@@ -3,7 +3,7 @@
 
 import io
 import time
-import IAm
+from services import IAm
 import boto3
 from zipfile import ZipFile
 from botocore.exceptions import ClientError
