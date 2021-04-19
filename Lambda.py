@@ -45,9 +45,18 @@ def create_lambda_function(
                 Publish=True,
             )
         except ClientError as e:
-            print("Waiting for resources to connect...")
-            time.sleep(delay)
-            delay = delay * retry_backoff
+            if "Function already exist" in e.response["Error"]["Message"]:
+                logging.warning("The function %s already exists.", function_name)
+                return get_function(function_name)
+            else:
+                print("Waiting for resources to connect...")
+                time.sleep(delay)
+                delay = delay * retry_backoff
+                if delay >= max_wait:
+                    logging.error(e.response["Error"]["Code"])
+                    logging.error(e.response["Error"]["Message"])
+                    logging.error("Couldn't create function %s.", function_name)
+                    raise
         else:
             logging.info(
                 "Created function '%s' with ARN: '%s'.",
@@ -55,9 +64,6 @@ def create_lambda_function(
                 response["FunctionArn"],
             )
             return response
-    logging.error(e.response["Error"]["Message"])
-    logging.error("Couldn't create function %s.", function_name)
-    raise (e)
 
 
 def delete_lambda_function(function_name: str, version=None) -> dict:
@@ -123,6 +129,16 @@ def add_permission(
     else:
         logging.info("Policy Permission Added.")
         return response
+
+
+def get_function(function_name: str) -> dict:
+    try:
+        response = lambda_client.get_function(FunctionName=function_name)
+    except ClientError as e:
+        logging.error(e.response["Error"]["Message"])
+        logging.error("Couldn't get function %s.", function_name)
+    else:
+        return response['Configuration']
 
 
 if __name__ == "__main__":
