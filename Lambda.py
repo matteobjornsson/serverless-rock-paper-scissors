@@ -62,7 +62,7 @@ def create_lambda_function(
 
 def delete_lambda_function(function_name: str, version=None) -> dict:
     try:
-        if version is not None:
+        if version:
             response = lambda_client.delete_function(
                 FunctionName=function_name, Qualifier=version
             )
@@ -89,18 +89,16 @@ def update_lambda_code(
                 Publish=publish,
                 DryRun=dryrun,
             )
-
+        except ClientError as e:
+            print("Waiting for resources to connect...")
+            time.sleep(delay)
+            delay = delay * retry_backoff
+        else:
             logging.info(
                 "Updated function '%s' with ARN: '%s'.",
                 function_name,
                 response["FunctionArn"],
             )
-        except ClientError as e:
-            logging.info("Waiting for resources to connect...")
-            print("Waiting for resources to connect...")
-            time.sleep(delay)
-            delay = delay * retry_backoff
-        else:
             return response
     logging.error(e.response["Error"]["Message"])
     logging.exception("Couldn't update function %s.", function_name)
@@ -120,8 +118,10 @@ def add_permission(
         )
     except ClientError as e:
         logging.error(e.response["Error"]["Message"])
+        logging.error("Couldn't add permission to policy")
+
     else:
-        logging.info("Lambda Policy Permission Added.")
+        logging.info("Policy Permission Added.")
         return response
 
 

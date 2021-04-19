@@ -74,7 +74,9 @@ response = SNS.add_subscription(
 # PINPOINT  #
 #############
 # Create pinpoint app to handle incoming SMS
-pinpoint_app_id = Pinpoint.create_pinpoint_app(pinpoint_app_name)
+response = Pinpoint.create_pinpoint_app(pinpoint_app_name)
+pinpoint_app_id = response["ApplicationResponse"]["Id"]
+
 Pinpoint.enable_pinpoint_SMS(pinpoint_app_id)
 input(
     "Enable Two-Way SMS on your Pinpoint App via the aws browser console. Press Enter to continue."

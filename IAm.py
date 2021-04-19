@@ -45,7 +45,7 @@ def create_basic_lambda_execution_role(iam_role_name):  # return iam role object
         logging.info("Created IAM role %s.", role.name)
         role.attach_policy(PolicyArn=policy_arn)
         logging.info("Attached basic execution policy to role %s.", role.name)
-    return role
+        return role
 
 
 def delete_role(iam_role) -> dict:

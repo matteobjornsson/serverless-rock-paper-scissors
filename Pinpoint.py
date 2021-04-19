@@ -4,9 +4,8 @@ import logging
 
 logging.basicConfig(filename="rps.log", level=logging.INFO)
 
-region = "us-east-1"
 
-pinpoint_client = boto3.client("pinpoint", region_name=region)
+pinpoint_client = boto3.client("pinpoint")
 
 
 def create_pinpoint_app(app_name: str) -> str:
@@ -17,12 +16,10 @@ def create_pinpoint_app(app_name: str) -> str:
         )
     except ClientError as e:
         logging.error(e.response["Error"]["Message"])
+        logging.error("Could not create pinpoint app %s.", app_name)
     else:
-        # grab the application ID to return.
-        application_id = response["ApplicationResponse"]["Id"]
-        logging.info("Pinpoint App Created %s.", application_id)
-        # return the application ID for further modification.
-        return application_id
+        logging.info("Pinpoint App %s Created.", app_name)
+        return response
 
 
 def delete_pinpoint_app(application_id: str) -> dict:
@@ -31,6 +28,7 @@ def delete_pinpoint_app(application_id: str) -> dict:
         response = pinpoint_client.delete_app(ApplicationId=application_id)
     except ClientError as e:
         logging.error(e.response["Error"]["Message"])
+        logging.error("Could not delete pinpoint app %s.", application_id)
     else:
         logging.info("Pinpoint App Deleted %s.", application_id)
         return response
@@ -44,6 +42,7 @@ def enable_pinpoint_SMS(applicationID: str) -> dict:
         )
     except ClientError as e:
         logging.error(e.response["Error"]["Message"])
+        logging.error("Could not enable pinpoint SMS.")
     else:
         logging.info("Pinpoint SMS Enabled %s.", str(response))
         return response
