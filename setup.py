@@ -4,16 +4,11 @@ import logging
 logging.basicConfig(filename="rps.log", level=logging.INFO)
 
 # service names and parameters
-# sns_incoming_SMS_topic_name = 'rps_incoming_sms'
-# lambda_function_filename = 'lambda_function_handler.py'
-# lambda_handler_name = 'lambda_function_handler.lambda_handler'
-# lambda_role_name = 'rps-lambda-role'
-# lambda_function_name = 'rps-lambda-function'
-# lamda_function_description = 'Rock Paper Scissors lambda function'
-# pinpoint_app_name = 'rock_paper_scissors'
-
-# alternative parameters for testing?
 sns_incoming_SMS_topic_name = "rps_incoming_sms_test"
+sns_outgoing_SMS_topic_name = "rps_outgoing_sms_test"
+lambda_policy_name = "BasicLambdaExecutionRoleDynamoCRUD"
+lambda_policy_file_name = "lambda_policy.json"
+lambda_assume_role_policy_file_name = "lambda_assume_role_policy.json"
 lambda_function_filename = "lambda_function_handler.py"
 lambda_handler_name = "lambda_function_handler.lambda_handler"
 lambda_role_name = "rps-lambda-role_test"
@@ -26,22 +21,41 @@ teardown = True
 # SNS  #
 ########
 # create sns topic to handle incoming SMS messages from Pinpoint
-sns_topic = SNS.create_topic(sns_incoming_SMS_topic_name)
+sns_in_topic = SNS.create_topic(sns_incoming_SMS_topic_name)
 # add a policy to allow Pinpoint to publish to this SNS topic
 pinpoint_policy_statement = {
     "Sid": "PinpointPublish",
     "Effect": "Allow",
     "Principal": {"Service": "mobile.amazonaws.com"},
     "Action": "sns:Publish",
-    "Resource": sns_topic.arn,
+    "Resource": sns_in_topic.arn,
 }
-SNS.add_policy_statement(sns_topic, pinpoint_policy_statement)
+SNS.add_policy_statement(sns_in_topic, pinpoint_policy_statement)
+
+# create sns topic to handle outgoing SMS messages from Lambda
+sns_out_topic = SNS.create_topic(sns_outgoing_SMS_topic_name)
+# add a policy to allow Lambda to publish to this SNS topic
+lambda_policy_statement = {
+    "Sid": "LambdaPublish",
+    "Effect": "Allow",
+    "Principal": {"Service": "lambda.amazonaws.com"},
+    "Action": "sns:Publish",
+    "Resource": sns_out_topic.arn,
+}
+SNS.add_policy_statement(sns_out_topic, lambda_policy_statement)
+
 
 ###########
 # LAMBDA  #
 ###########
 # create lambda function to handle Rock Paper Scissors logic when SMS are received
-iam_role = IAm.create_basic_lambda_execution_role(lambda_role_name)
+with open(lambda_policy_file_name) as file:
+    lambda_policy_json = file.read()
+with open(lambda_assume_role_policy_file_name) as file:
+    assume_role_json = file.read()
+
+iam_policy = IAm.create_policy(lambda_policy_name, lambda_policy_json)
+iam_role = IAm.create_role(lambda_role_name, assume_role_json, [iam_policy.arn])
 function_code = Lambda.zip_lambda_code(lambda_function_filename)
 
 response = Lambda.create_lambda_function(
@@ -51,21 +65,20 @@ response = Lambda.create_lambda_function(
     iam_role,
     function_code,
 )
-function_arn = response["FunctionArn"]
+function_arn = Lambda.get_function(lambda_function_name)["FunctionArn"]
 
 # Give the sns topic permission to invoke the Lambda function
 Lambda.add_permission(
     action="lambda:InvokeFunction",
     function_name=lambda_function_name,
     principal="sns.amazonaws.com",
-    # source_arn=sns_topic.arn,
-    source_arn="arn:aws:sns:us-east-1:802108040626:rps_incoming_sms_test",
+    source_arn=sns_in_topic.arn,
     statement_id="sns",
 )
 
 # add a lambda as a subscriber to the topic
 response = SNS.add_subscription(
-    topic_arn=sns_topic.arn,
+    topic_arn=sns_in_topic.arn,
     protocol="lambda",
     endpoint=function_arn,
 )
@@ -84,8 +97,9 @@ input(
 print("Instructions here to play the game")
 
 if teardown:
-    SNS.delete_topic(sns_topic)
+    SNS.delete_topic(sns_in_topic)
     IAm.delete_role(iam_role)
+    IAm.delete_policy(iam_policy)
     Lambda.delete_lambda_function(lambda_function_name)
     Pinpoint.delete_pinpoint_app(pinpoint_app_id)
     print("Service teardown complete")
