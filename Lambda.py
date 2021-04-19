@@ -30,7 +30,7 @@ def zip_lambda_code(file_name: str) -> bytes:
 
 def create_lambda_function(
     function_name: str, description: str, handler_name: str, iam_role, code_bytes: bytes
-) -> str:
+) -> dict:
     delay = initial_wait
     # add in exponential backoff waiting for AWS services (iam_role) to deploy and connect
     while delay < max_wait:
@@ -44,21 +44,20 @@ def create_lambda_function(
                 Code={"ZipFile": code_bytes},
                 Publish=True,
             )
-            function_arn = response["FunctionArn"]
+        except ClientError as e:
+            print("Waiting for resources to connect...")
+            time.sleep(delay)
+            delay = delay * retry_backoff
+        else:
             logging.info(
                 "Created function '%s' with ARN: '%s'.",
                 function_name,
                 response["FunctionArn"],
             )
-        except ClientError as e:
-            logging.info("Waiting for resources to connect...")
-            print("Waiting for resources to connect...")
-            time.sleep(delay)
-            delay = delay * retry_backoff
-        else:
-            return function_arn
+            return response
     logging.error(e.response["Error"]["Message"])
     logging.error("Couldn't create function %s.", function_name)
+    raise (e)
 
 
 def delete_lambda_function(function_name: str, version=None) -> dict:
@@ -69,10 +68,12 @@ def delete_lambda_function(function_name: str, version=None) -> dict:
             )
         else:
             response = lambda_client.delete_function(FunctionName=function_name)
-        return response
     except ClientError as error:
         logging.error(error.response["Error"]["Message"])
         logging.error("Couldn't delete function %s.", function_name)
+    else:
+        logging.info("Function %s Deleted.", function_name)
+        return response
 
 
 def update_lambda_code(
@@ -103,13 +104,14 @@ def update_lambda_code(
             return response
     logging.error(e.response["Error"]["Message"])
     logging.exception("Couldn't update function %s.", function_name)
+    raise (e)
 
 
 def add_permission(
     action: str, function_name: str, principal: str, source_arn: str, statement_id: str
-) -> None:
+) -> dict:
     try:
-        _ = lambda_client.add_permission(
+        response = lambda_client.add_permission(
             Action=action,
             FunctionName=function_name,
             Principal=principal,
@@ -119,9 +121,8 @@ def add_permission(
     except ClientError as e:
         logging.error(e.response["Error"]["Message"])
     else:
-        success_msg = "Lambda Policy Permission Added."
-        logging.info(success_msg)
-        print(success_msg)
+        logging.info("Lambda Policy Permission Added.")
+        return response
 
 
 if __name__ == "__main__":

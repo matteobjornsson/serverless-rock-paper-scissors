@@ -36,7 +36,6 @@ def delete_pinpoint_app(application_id: str) -> dict:
         return response
 
 
-
 def enable_pinpoint_SMS(applicationID: str) -> dict:
     # enable SMS channel on Pinpoint app
     try:

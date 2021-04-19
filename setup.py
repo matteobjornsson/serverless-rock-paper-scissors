@@ -41,16 +41,18 @@ SNS.add_policy_statement(sns_topic, pinpoint_policy_statement)
 # LAMBDA  #
 ###########
 # create lambda function to handle Rock Paper Scissors logic when SMS are received
-iam_role = IAm.create_iam_role(lambda_role_name)
+iam_role = IAm.create_basic_lambda_execution_role(lambda_role_name)
 function_code = Lambda.zip_lambda_code(lambda_function_filename)
-# TODO: add waiter or exponential backoff to wait for role creation (create_function will fail if trying too soon)
-Lambda.create_lambda_function(
+
+response = Lambda.create_lambda_function(
     lambda_function_name,
     lamda_function_description,
     lambda_handler_name,
     iam_role,
     function_code,
 )
+function_arn = response["FunctionArn"]
+
 # Give the sns topic permission to invoke the Lambda function
 Lambda.add_permission(
     action="lambda:InvokeFunction",
@@ -59,6 +61,13 @@ Lambda.add_permission(
     # source_arn=sns_topic.arn,
     source_arn="arn:aws:sns:us-east-1:802108040626:rps_incoming_sms_test",
     statement_id="sns",
+)
+
+# add a lambda as a subscriber to the topic
+response = SNS.add_subscription(
+    topic_arn=sns_topic.arn,
+    protocol="lambda",
+    endpoint=function_arn,
 )
 
 #############

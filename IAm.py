@@ -11,7 +11,7 @@ logging.basicConfig(filename="rps.log", level=logging.INFO)
 iam_resource = boto3.resource("iam")
 
 
-def create_iam_role(iam_role_name):  # return iam role object
+def create_basic_lambda_execution_role(iam_role_name):  # return iam role object
     lambda_assume_role_policy = {
         "Version": "2012-10-17",
         "Statement": [
@@ -29,12 +29,6 @@ def create_iam_role(iam_role_name):  # return iam role object
             AssumeRolePolicyDocument=json.dumps(lambda_assume_role_policy),
         )
         iam_resource.meta.client.get_waiter("role_exists").wait(RoleName=iam_role_name)
-        logging.info("Created role %s.", role.name)
-        print("IAM: Created role %s.", role.name)
-
-        role.attach_policy(PolicyArn=policy_arn)
-        logging.info("Attached basic execution policy to role %s.", role.name)
-        print("IAM: Attached basic execution policy to role %s.", role.name)
 
     except ClientError as error:
         if error.response["Error"]["Code"] == "EntityAlreadyExists":
@@ -47,6 +41,10 @@ def create_iam_role(iam_role_name):  # return iam role object
                 iam_role_name,
                 policy_arn,
             )
+    else:
+        logging.info("Created IAM role %s.", role.name)
+        role.attach_policy(PolicyArn=policy_arn)
+        logging.info("Attached basic execution policy to role %s.", role.name)
     return role
 
 
@@ -55,10 +53,12 @@ def delete_role(iam_role) -> dict:
         for policy in iam_role.attached_policies.all():
             policy.detach_role(RoleName=iam_role.name)
         response = iam_role.delete()
-        return response
     except ClientError as error:
         logging.error(error.response["Error"]["Message"])
         logging.error("Couldn't delete role %s", iam_role.name)
+    else:
+        logging.info("Deleted role '%s'", iam_role.name)
+        return response
 
 
 # if __name__ == '__main__':
