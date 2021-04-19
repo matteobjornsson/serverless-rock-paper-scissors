@@ -141,26 +141,41 @@ def get_function(function_name: str) -> dict:
         return response["Configuration"]
 
 
+# "unit" test
 if __name__ == "__main__":
 
-    lambda_function_filename = (
-        "/home/matteo/repos/serverless-rock-paper-scissors/lambda_function_handler.py"
-    )
+    lambda_policy_name = "BasicLambdaExecutionRoleDynamoCRUD"
+    lambda_policy_file_name = "lambda_policy.json"
+    lambda_assume_role_policy_file_name = "lambda_assume_role_policy.json"
+    lambda_function_filename = "lambda_function_handler.py"
     lambda_handler_name = "lambda_function_handler.lambda_handler"
-    lambda_role_name = "rps-lambda-role222"
-    lambda_function_name = "rps-lambda-function222"
+    lambda_role_name = "rps-lambda-role_test"
+    lambda_function_name = "rps-lambda-function_test"
+    lamda_function_description = "Rock Paper Scissors lambda function_test"
 
-    iam_role = IAm.create_iam_role(lambda_role_name)
+    with open(lambda_policy_file_name) as file:
+        lambda_policy_json = file.read()
+    with open(lambda_assume_role_policy_file_name) as file:
+        assume_role_json = file.read()
+
+    iam_policy = IAm.create_policy(lambda_policy_name, lambda_policy_json)
+    iam_role = IAm.create_role(lambda_role_name, assume_role_json, [iam_policy.arn])
     function_code = zip_lambda_code(lambda_function_filename)
-    description = "Rock Paper Scissors lambda function"
-    create_lambda_function(
-        lambda_function_name, description, lambda_handler_name, iam_role, function_code
+
+    response = create_lambda_function(
+        lambda_function_name,
+        lamda_function_description,
+        lambda_handler_name,
+        iam_role,
+        function_code,
     )
-    add_permission(
-        action="lambda:InvokeFunction",
-        function_name=lambda_function_name,
-        principal="sns.amazonaws.com",
-        source_arn="arn:aws:sns:us-east-1:802108040626:rps_incoming_sms",
-        statement_id="sns",
+
+    response = create_lambda_function(
+        lambda_function_name,
+        lamda_function_description,
+        lambda_handler_name,
+        iam_role,
+        function_code,
     )
-    print("made it")
+
+    delete_lambda_function(lambda_function_name)
