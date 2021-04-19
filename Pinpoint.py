@@ -8,7 +8,7 @@ logging.basicConfig(filename="rps.log", level=logging.INFO)
 pinpoint_client = boto3.client("pinpoint")
 
 
-def create_pinpoint_app(app_name: str) -> str:
+def create_pinpoint_app(app_name: str) -> dict:
     # create a pinpoint app 'rock_paper_scissors'
     try:
         response = pinpoint_client.create_app(
@@ -46,3 +46,10 @@ def enable_pinpoint_SMS(applicationID: str) -> dict:
     else:
         logging.info("Pinpoint SMS Enabled.")
         return response
+
+if __name__ == '__main__':
+    app_name = "pinpoint_test_name"
+    response = create_pinpoint_app(app_name)
+    pinpoint_app_id = response["ApplicationResponse"]["Id"]
+    response = create_pinpoint_app(app_name)
+    delete_pinpoint_app(pinpoint_app_id)
