@@ -1,5 +1,6 @@
 import IAm, Lambda, Pinpoint, SNS, Dynamodb
 import logging
+import pprint
 
 logging.basicConfig(filename="rps.log", level=logging.INFO)
 
@@ -26,33 +27,6 @@ db_attribute_definitions = [
 ]
 teardown = True
 
-########
-# SNS  #
-########
-# create sns topic to handle incoming SMS messages from Pinpoint
-sns_in_topic = SNS.create_topic(sns_incoming_SMS_topic_name)
-# add a policy to allow Pinpoint to publish to this SNS topic
-pinpoint_policy_statement = {
-    "Sid": "PinpointPublish",
-    "Effect": "Allow",
-    "Principal": {"Service": "mobile.amazonaws.com"},
-    "Action": "sns:Publish",
-    "Resource": sns_in_topic.arn,
-}
-SNS.add_policy_statement(sns_in_topic, pinpoint_policy_statement)
-
-# create sns topic to handle outgoing SMS messages from Lambda
-sns_out_topic = SNS.create_topic(sns_outgoing_SMS_topic_name)
-# add a policy to allow Lambda to publish to this SNS topic
-lambda_policy_statement = {
-    "Sid": "LambdaPublish",
-    "Effect": "Allow",
-    "Principal": {"Service": "lambda.amazonaws.com"},
-    "Action": "sns:Publish",
-    "Resource": sns_out_topic.arn,
-}
-SNS.add_policy_statement(sns_out_topic, lambda_policy_statement)
-
 
 ###########
 # LAMBDA  #
@@ -74,7 +48,34 @@ response = Lambda.create_lambda_function(
     iam_role,
     function_code,
 )
-function_arn = Lambda.get_function(lambda_function_name)["FunctionArn"]
+function_arn = response["FunctionArn"]
+
+########
+# SNS  #
+########
+# create sns topic to handle incoming SMS messages from Pinpoint
+sns_in_topic = SNS.create_topic(sns_incoming_SMS_topic_name)
+# add a policy to allow Pinpoint to publish to this SNS topic
+pinpoint_policy_statement = {
+    "Sid": "PinpointPublish",
+    "Effect": "Allow",
+    "Principal": {"Service": "mobile.amazonaws.com"},
+    "Action": "sns:Publish",
+    "Resource": sns_in_topic.arn,
+}
+SNS.add_policy_statement(sns_in_topic, pinpoint_policy_statement)
+
+# create sns topic to handle outgoing SMS messages from Lambda
+sns_out_topic = SNS.create_topic(sns_outgoing_SMS_topic_name)
+# add a policy to allow Lambda to publish to this SNS topic
+lambda_policy_statement = {
+    "Sid": "LambdaPublish",
+    "Effect": "Allow",
+    "Principal": {"AWS": iam_role.arn},
+    "Action": "sns:Publish",
+    "Resource": sns_out_topic.arn,
+}
+SNS.add_policy_statement(sns_out_topic, lambda_policy_statement)
 
 # Give the sns topic permission to invoke the Lambda function
 Lambda.add_permission(
@@ -106,12 +107,13 @@ pinpoint_app_id = response["ApplicationResponse"]["Id"]
 
 Pinpoint.enable_pinpoint_SMS(pinpoint_app_id)
 
+
 input(
     "Enable Two-Way SMS on your Pinpoint App via the aws browser console. Press Enter to continue."
 )
 print("Instructions here to play the game")
 
-input( "Pausing here for testing. Press enter to continue.")
+input("Pausing here for testing. Press enter to continue.")
 
 if teardown:
     SNS.delete_topic(sns_in_topic)
