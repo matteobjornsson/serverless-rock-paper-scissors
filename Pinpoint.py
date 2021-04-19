@@ -47,7 +47,8 @@ def enable_pinpoint_SMS(applicationID: str) -> dict:
         logging.info("Pinpoint SMS Enabled.")
         return response
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     app_name = "pinpoint_test_name"
     response = create_pinpoint_app(app_name)
     pinpoint_app_id = response["ApplicationResponse"]["Id"]

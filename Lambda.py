@@ -138,7 +138,7 @@ def get_function(function_name: str) -> dict:
         logging.error(e.response["Error"]["Message"])
         logging.error("Couldn't get function %s.", function_name)
     else:
-        return response['Configuration']
+        return response["Configuration"]
 
 
 if __name__ == "__main__":
