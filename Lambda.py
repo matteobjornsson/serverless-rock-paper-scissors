@@ -12,6 +12,7 @@ import logging
 logging.basicConfig(filename="rps.log", level=logging.INFO)
 
 lambda_client = boto3.client("lambda")
+# parameters for exponential backoff
 retry_backoff = 2
 initial_wait = 1
 max_wait = 9  # only wait < 9s for funciton creation before giving up.
@@ -54,15 +55,14 @@ def create_lambda_function(
             if "Function already exist" in e.response["Error"]["Message"]:
                 logging.warning("The function %s already exists.", function_name)
                 return get_function(function_name)
-            else:
+            elif delay < max_wait:
                 print("Waiting for resources to connect...")
                 time.sleep(delay)
                 delay = delay * retry_backoff
-                if delay >= max_wait:
-                    logging.error(e.response["Error"]["Code"])
-                    logging.error(e.response["Error"]["Message"])
-                    logging.error("Couldn't create function %s.", function_name)
-                    raise
+            else:
+                logging.error(e.response["Error"]["Code"])
+                logging.error("Couldn't create function %s.", function_name)
+                raise
         else:
             logging.info(
                 "Created function '%s' with ARN: '%s'.",
