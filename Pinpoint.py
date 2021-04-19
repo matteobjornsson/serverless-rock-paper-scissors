@@ -44,5 +44,5 @@ def enable_pinpoint_SMS(applicationID: str) -> dict:
         logging.error(e.response["Error"]["Message"])
         logging.error("Could not enable pinpoint SMS.")
     else:
-        logging.info("Pinpoint SMS Enabled %s.", str(response))
+        logging.info("Pinpoint SMS Enabled.")
         return response

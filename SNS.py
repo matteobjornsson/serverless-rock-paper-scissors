@@ -16,15 +16,18 @@ def create_topic(topic_name: str) -> sns.Topic:
         topic = sns.create_topic(Name=topic_name, Attributes={}, Tags=[])
     except ClientError as e:
         logging.error(e.response["Error"]["Message"])
+        logging.error("Couldn't create topic %s.", topic_name)
+
     else:
-        logging.info("SNS: Topic %s Created.", topic.name)
+        logging.info("SNS: Topic %s Created.", topic_name)
         return topic
 
 
 def delete_topic(topic: sns.Topic) -> dict:
     try:
         response = topic.delete()
-    except ClientError:
+    except ClientError as e:
+        logging.error(e.response["Error"]["Message"])
         logging.error("Couldn't delete topic %s.", topic.arn)
     else:
         logging.info("Deleted topic %s.", topic.arn)
@@ -43,8 +46,9 @@ def add_policy_statement(topic: sns.Topic, policy_statement: dict) -> dict:
         )
     except ClientError as e:
         logging.error(e.response["Error"]["Message"])
+        logging.error("Couldn't add policy statement %s.", topic.arn)
     else:
-        logging.info("SNS: Policy %s Updated.", str(response))
+        logging.info("SNS: Policy Updated.")
         return response
 
 
@@ -66,7 +70,9 @@ def add_subscription(
     except ClientError as e:
         logging.error(e.response["Error"]["Message"])
     else:
-        logging.info("Subscription added to SNS topic. %s.", str(response))
+        logging.info(
+            "Subscription added to SNS topic. %s.", response["SubscriptionArn"]
+        )
         return response
 
 

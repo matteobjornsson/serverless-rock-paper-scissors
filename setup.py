@@ -90,4 +90,4 @@ if teardown:
     IAm.delete_role(iam_role)
     Lambda.delete_lambda_function(lambda_function_name)
     Pinpoint.delete_pinpoint_app(pinpoint_app_id)
-    logging.info("Service teardown complete")
+    print("Service teardown complete")
