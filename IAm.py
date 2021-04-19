@@ -39,6 +39,7 @@ def create_role(
                 iam_role_name,
                 str(policy_arns),
             )
+            raise
     else:
         logging.info("Created IAM role %s.", role.name)
         logging.info("Attached basic execution policy to role %s.", role.name)
