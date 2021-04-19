@@ -107,7 +107,7 @@ def delete_policy(iam_policy) -> dict:
         logging.error(error.response["Error"]["Message"])
         logging.error("Couldn't delete policy %s", iam_policy.arn)
     else:
-        logging.info("Deleted role '%s'", iam_policy.arn)
+        logging.info("Deleted policy '%s'", iam_policy.arn)
         return response
 
 
