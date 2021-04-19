@@ -14,6 +14,7 @@ def lambda_handler(event, context):
 
     s3 = boto3.resource("s3")
     # an object is defined by its bucket and key, irrelevant of if it exists or not.
+    # *********************this line contains hardcoded service details
     object = s3.Object("rock-paper-scissors-csci566", "/throwTEST.txt")
 
     # Try to get existing throw
@@ -35,7 +36,9 @@ def lambda_handler(event, context):
         # text back the results
         client = boto3.client("sns", region_name="us-east-1")
         response = client.publish(
-            TargetArn="arn:aws:sns:us-east-1:802108040626:game_result", Message=result
+            # *********************this line contains hardcoded service details
+            TargetArn="arn:aws:sns:us-east-1:802108040626:game_result",
+            Message=result,
         )
         # print("Result published: ", response)
 
@@ -53,6 +56,7 @@ def lambda_handler(event, context):
         # text update message
         client = boto3.client("sns", region_name="us-east-1")
         response = client.publish(
+            # *********************this line contains hardcoded service details
             TargetArn="arn:aws:sns:us-east-1:802108040626:game_result",
             Message="Waiting for other player",
         )
