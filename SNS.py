@@ -1,5 +1,4 @@
 import boto3
-import pprint
 import json
 from botocore.exceptions import ClientError
 import logging
