@@ -1,6 +1,7 @@
 import pprint
 import time
 import boto3
+import json
 from botocore.exceptions import ClientError
 import logging
 
@@ -11,16 +12,6 @@ dynamodb_client = boto3.client("dynamodb")
 initial_wait = 1
 max_wait = 9
 retry_backoff = 2
-
-key_schema = [
-    {"AttributeName": "phone_number", "KeyType": "HASH"},  # Partition key
-    {"AttributeName": "round", "KeyType": "RANGE"},  # Partition key
-]
-
-attribute_definitions = [
-    {"AttributeName": "phone_number", "AttributeType": "S"},
-    {"AttributeName": "round", "AttributeType": "S"},
-]
 
 
 def create_table(
@@ -91,16 +82,24 @@ def delete_table(table_name: str) -> dict:
             return response
 
 
-
-
-
 # response = create_table("test_table2", key_schema, attribute_definitions)
 # # table_arn = response['TableDescription']['TableArn']
 if __name__ == "__main__":
+
+    db_key_schema = [
+        {"AttributeName": "phone_number", "KeyType": "HASH"},  # Partition key
+        {"AttributeName": "round", "KeyType": "RANGE"},  # Partition key
+    ]
+
+    db_attribute_definitions = [
+        {"AttributeName": "phone_number", "AttributeType": "S"},
+        {"AttributeName": "round", "AttributeType": "S"},
+    ]
+
     table_name = "test_table"
-    response = create_table(table_name, key_schema, attribute_definitions)
+    response = create_table(table_name, db_key_schema, db_attribute_definitions)
     pprint.pprint(response)
-    response = create_table(table_name, key_schema, attribute_definitions)
+    response = create_table(table_name, db_key_schema, db_attribute_definitions)
     # response = dynamodb_client.describe_table(TableName=table_name)
     # pprint.pprint(response)
     print()

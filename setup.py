@@ -1,4 +1,4 @@
-import IAm, Lambda, Pinpoint, SNS
+import IAm, Lambda, Pinpoint, SNS, Dynamodb
 import logging
 
 logging.basicConfig(filename="rps.log", level=logging.INFO)
@@ -15,6 +15,15 @@ lambda_role_name = "rps-lambda-role_test"
 lambda_function_name = "rps-lambda-function_test"
 lamda_function_description = "Rock Paper Scissors lambda function_test"
 pinpoint_app_name = "rock_paper_scissors_test"
+db_table_name = "players"
+db_key_schema = [
+    {"AttributeName": "phone_number", "KeyType": "HASH"},  # Partition key
+    {"AttributeName": "round", "KeyType": "RANGE"},  # Partition key
+]
+db_attribute_definitions = [
+    {"AttributeName": "phone_number", "AttributeType": "S"},
+    {"AttributeName": "round", "AttributeType": "S"},
+]
 teardown = True
 
 ########
@@ -84,6 +93,11 @@ response = SNS.add_subscription(
 )
 
 #############
+# DYNAMODB  #
+#############
+response = Dynamodb.create_table(db_table_name, db_key_schema, db_attribute_definitions)
+
+#############
 # PINPOINT  #
 #############
 # Create pinpoint app to handle incoming SMS
@@ -91,15 +105,20 @@ response = Pinpoint.create_pinpoint_app(pinpoint_app_name)
 pinpoint_app_id = response["ApplicationResponse"]["Id"]
 
 Pinpoint.enable_pinpoint_SMS(pinpoint_app_id)
+
 input(
     "Enable Two-Way SMS on your Pinpoint App via the aws browser console. Press Enter to continue."
 )
 print("Instructions here to play the game")
 
+input( "Pausing here for testing. Press enter to continue.")
+
 if teardown:
     SNS.delete_topic(sns_in_topic)
+    SNS.delete_topic(sns_out_topic)
     IAm.delete_role(iam_role)
     IAm.delete_policy(iam_policy)
     Lambda.delete_lambda_function(lambda_function_name)
+    Dynamodb.delete_table(db_table_name)
     Pinpoint.delete_pinpoint_app(pinpoint_app_id)
     print("Service teardown complete")
