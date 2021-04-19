@@ -19,6 +19,9 @@ attribute_definitions = [
 
 
 def create_table(table_name: str, key_schema: list, attribute_definitions: list):
+    """
+    TODO: write function description
+    """
     try:
         response = dynamodb_client.create_table(
             TableName=table_name,
@@ -36,6 +39,9 @@ def create_table(table_name: str, key_schema: list, attribute_definitions: list)
 
 
 def delete_table(table_name: str):
+    """
+    TODO: write function description
+    """
     try:
         response = dynamodb_client.delete_table(TableName=table_name)
     except ClientError as error:

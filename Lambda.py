@@ -16,8 +16,11 @@ retry_backoff = 2
 initial_wait = 1
 max_wait = 9  # only wait < 9s for funciton creation before giving up.
 
-# zip a given file, return file as bytes
+
 def zip_lambda_code(file_name: str) -> bytes:
+    """
+    TODO: write function description
+    """
     # buffer the zip file contents as a BytesIO object
     bytes_buffer = io.BytesIO()
     with ZipFile(bytes_buffer, "w") as zip:
@@ -31,6 +34,9 @@ def zip_lambda_code(file_name: str) -> bytes:
 def create_lambda_function(
     function_name: str, description: str, handler_name: str, iam_role, code_bytes: bytes
 ) -> dict:
+    """
+    TODO: write function description
+    """
     delay = initial_wait
     # add in exponential backoff waiting for AWS services (iam_role) to deploy and connect
     while delay < max_wait:
@@ -67,6 +73,9 @@ def create_lambda_function(
 
 
 def delete_lambda_function(function_name: str, version=None) -> dict:
+    """
+    TODO: write function description
+    """
     try:
         if version:
             response = lambda_client.delete_function(
@@ -85,6 +94,9 @@ def delete_lambda_function(function_name: str, version=None) -> dict:
 def update_lambda_code(
     function_name: str, code_bytes: bytes, publish=True, dryrun=False
 ) -> dict:
+    """
+    TODO: write function description
+    """
     delay = initial_wait
     # add in exponential backoff waiting for AWS services (iam_role) to deploy and connect
     while delay < max_wait:
@@ -116,6 +128,9 @@ def update_lambda_code(
 def add_permission(
     action: str, function_name: str, principal: str, source_arn: str, statement_id: str
 ) -> dict:
+    """
+    TODO: write function description
+    """
     try:
         response = lambda_client.add_permission(
             Action=action,
@@ -134,6 +149,9 @@ def add_permission(
 
 
 def get_function(function_name: str) -> dict:
+    """
+    TODO: write function description
+    """
     try:
         response = lambda_client.get_function(FunctionName=function_name)
     except ClientError as e:

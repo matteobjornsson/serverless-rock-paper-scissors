@@ -9,7 +9,9 @@ pinpoint_client = boto3.client("pinpoint")
 
 
 def create_pinpoint_app(app_name: str) -> dict:
-    # create a pinpoint app 'rock_paper_scissors'
+    """
+    TODO: write function description
+    """
     try:
         response = pinpoint_client.create_app(
             CreateApplicationRequest={"Name": app_name, "tags": {}}
@@ -23,7 +25,9 @@ def create_pinpoint_app(app_name: str) -> dict:
 
 
 def delete_pinpoint_app(application_id: str) -> dict:
-    # Delete a pinpoint app
+    """
+    TODO: write function description
+    """
     try:
         response = pinpoint_client.delete_app(ApplicationId=application_id)
     except ClientError as e:
@@ -35,7 +39,9 @@ def delete_pinpoint_app(application_id: str) -> dict:
 
 
 def enable_pinpoint_SMS(applicationID: str) -> dict:
-    # enable SMS channel on Pinpoint app
+    """
+    TODO: write function description
+    """
     try:
         response = pinpoint_client.update_sms_channel(
             ApplicationId=applicationID, SMSChannelRequest={"Enabled": True}

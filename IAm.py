@@ -17,6 +17,9 @@ sts_client = boto3.client("sts")
 def create_role(
     iam_role_name: str, assume_role_policy_json: str, policy_arns: list
 ) -> iam_resource.Role:  # return iam role object
+    """
+    TODO: write function description
+    """
     try:
         role = iam_resource.create_role(
             RoleName=iam_role_name,
@@ -47,6 +50,9 @@ def create_role(
 
 
 def create_policy(policy_name: str, policy_json: str) -> iam_resource.Policy:
+    """
+    TODO: write function description
+    """
     try:
         policy = iam_resource.create_policy(
             PolicyName=policy_name, PolicyDocument=policy_json
@@ -66,6 +72,9 @@ def create_policy(policy_name: str, policy_json: str) -> iam_resource.Policy:
 
 
 def get_policy_by_name(policy_name: str) -> iam_resource.Policy:
+    """
+    TODO: write function description
+    """
     account_id = sts_client.get_caller_identity()["Account"]
     policy_arn = f"arn:aws:iam::{account_id}:policy/{policy_name}"
     policy = iam_resource.Policy(policy_arn)
@@ -73,6 +82,9 @@ def get_policy_by_name(policy_name: str) -> iam_resource.Policy:
 
 
 def delete_role(iam_role) -> dict:
+    """
+    TODO: write function description
+    """
     try:
         for policy in iam_role.attached_policies.all():
             policy.detach_role(RoleName=iam_role.name)
@@ -86,6 +98,9 @@ def delete_role(iam_role) -> dict:
 
 
 def delete_policy(iam_policy) -> dict:
+    """
+    TODO: write function description
+    """
     try:
         response = iam_policy.delete()
     except ClientError as error:

@@ -8,8 +8,11 @@ logging.basicConfig(filename="rps.log", level=logging.INFO)
 sns = boto3.resource("sns")
 sns_client = boto3.client("sns")
 
-# create an SNS topic
+
 def create_topic(topic_name: str) -> sns.Topic:
+    """
+    TODO: write function description
+    """
     try:
         # create a simple (non fifo) topic named 'topic_name'
         topic = sns.create_topic(Name=topic_name, Attributes={}, Tags=[])
@@ -23,6 +26,9 @@ def create_topic(topic_name: str) -> sns.Topic:
 
 
 def delete_topic(topic: sns.Topic) -> dict:
+    """
+    TODO: write function description
+    """
     try:
         response = topic.delete()
     except ClientError as e:
@@ -34,6 +40,9 @@ def delete_topic(topic: sns.Topic) -> dict:
 
 
 def add_policy_statement(topic: sns.Topic, policy_statement: dict) -> dict:
+    """
+    TODO: write function description
+    """
     # grab current policy
     policy = json.loads(topic.attributes["Policy"])
     # append new statement
@@ -58,6 +67,9 @@ def add_subscription(
     attributes={},
     return_subscription_arn=True,
 ) -> dict:
+    """
+    TODO: write function description
+    """
     try:
         response = sns_client.subscribe(
             TopicArn=topic_arn,
