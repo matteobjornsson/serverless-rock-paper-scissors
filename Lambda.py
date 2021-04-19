@@ -138,7 +138,8 @@ def get_function(function_name: str) -> dict:
         response = lambda_client.get_function(FunctionName=function_name)
     except ClientError as e:
         logging.error(e.response["Error"]["Message"])
-        logging.error("Couldn't get function %s.", function_name)
+        logging.exception("Couldn't get function %s.", function_name)
+        raise
     else:
         return response["Configuration"]
 

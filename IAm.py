@@ -34,7 +34,7 @@ def create_role(
             return role
         else:
             logging.error(error.response["Error"]["Message"])
-            logging.error(
+            logging.exception(
                 "Couldn't create role %s or attach policy %s.",
                 iam_role_name,
                 str(policy_arns),
@@ -58,7 +58,7 @@ def create_policy(policy_name: str, policy_json: str) -> iam_resource.Policy:
             return policy
         else:
             logging.error(error.response["Error"]["Message"])
-            logging.error("Couldn't create policy %s", policy_name)
+            logging.exception("Couldn't create policy %s", policy_name)
             raise
     else:
         logging.info("Created Policy '%s'", policy_name)
