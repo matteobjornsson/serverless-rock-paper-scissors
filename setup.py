@@ -1,4 +1,6 @@
 from services import IAm, Lambda, Pinpoint, SNS, Dynamodb
+from util import *
+import os
 import logging
 import pprint
 
@@ -27,29 +29,6 @@ db_attribute_definitions = [
 ]
 teardown = True
 
-
-###########
-# LAMBDA  #
-###########
-# create lambda function to handle Rock Paper Scissors logic when SMS are received
-with open(lambda_policy_file_name) as file:
-    lambda_policy_json = file.read()
-with open(lambda_assume_role_policy_file_name) as file:
-    assume_role_json = file.read()
-
-iam_policy = IAm.create_policy(lambda_policy_name, lambda_policy_json)
-iam_role = IAm.create_role(lambda_role_name, assume_role_json, [iam_policy.arn])
-function_code = Lambda.zip_lambda_code(lambda_function_filename)
-
-response = Lambda.create_lambda_function(
-    lambda_function_name,
-    lamda_function_description,
-    lambda_handler_name,
-    iam_role,
-    function_code,
-)
-function_arn = response["FunctionArn"]
-
 ########
 # SNS  #
 ########
@@ -64,6 +43,48 @@ pinpoint_policy_statement = {
     "Resource": sns_in_topic.arn,
 }
 SNS.add_policy_statement(sns_in_topic, pinpoint_policy_statement)
+
+
+#############
+# PINPOINT  #
+#############
+# Create pinpoint app to handle incoming SMS
+response = Pinpoint.create_pinpoint_app(pinpoint_app_name)
+pinpoint_app_id = response["ApplicationResponse"]["Id"]
+
+Pinpoint.enable_pinpoint_SMS(pinpoint_app_id)
+print("pinpoint appID", pinpoint_app_id)
+input("this is where you should programmatically generate the lambda code")
+
+lines_to_inject = [
+    f"applicationId = \"{pinpoint_app_id}\"\n"
+]
+# update the lambda file code with pinpoint app id before deploying
+insert_lines_at_keyword(os.path.abspath(lambda_function_filename), lines_to_inject, "insert new parameters after this line:")
+
+###########
+# LAMBDA  #
+###########
+# create lambda function to handle Rock Paper Scissors logic when SMS are received
+with open(lambda_policy_file_name) as file:
+    lambda_policy_json = file.read()
+with open(lambda_assume_role_policy_file_name) as file:
+    assume_role_json = file.read()
+
+iam_policy = IAm.create_policy(lambda_policy_name, lambda_policy_json)
+iam_role = IAm.create_role(lambda_role_name, assume_role_json, [iam_policy.arn])
+function_code = return_zipped_bytes(lambda_function_filename)
+
+response = Lambda.create_lambda_function(
+    lambda_function_name,
+    lamda_function_description,
+    lambda_handler_name,
+    iam_role,
+    function_code,
+)
+function_arn = response["FunctionArn"]
+
+
 
 # create sns topic to handle outgoing SMS messages from Lambda
 sns_out_topic = SNS.create_topic(sns_outgoing_SMS_topic_name)
@@ -98,20 +119,6 @@ response = SNS.add_subscription(
 #############
 response = Dynamodb.create_table(db_table_name, db_key_schema, db_attribute_definitions)
 
-#############
-# PINPOINT  #
-#############
-# Create pinpoint app to handle incoming SMS
-response = Pinpoint.create_pinpoint_app(pinpoint_app_name)
-pinpoint_app_id = response["ApplicationResponse"]["Id"]
-
-Pinpoint.enable_pinpoint_SMS(pinpoint_app_id)
-
-
-input(
-    "Enable Two-Way SMS on your Pinpoint App via the aws browser console. Press Enter to continue."
-)
-print("Instructions here to play the game")
 
 input("Pausing here for testing. Press enter to continue.")
 
@@ -123,4 +130,5 @@ if teardown:
     Lambda.delete_lambda_function(lambda_function_name)
     Dynamodb.delete_table(db_table_name)
     Pinpoint.delete_pinpoint_app(pinpoint_app_id)
+    delete_lines(os.path.abspath(lambda_function_filename), lines_to_inject)
     print("Service teardown complete")
