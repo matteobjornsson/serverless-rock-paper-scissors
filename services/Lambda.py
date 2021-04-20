@@ -2,6 +2,7 @@
 # https://docs.aws.amazon.com/code-samples/latest/catalog/python-lambda-boto_client_examples-lambda_basics.py.html
 
 import time
+from util import return_zipped_bytes
 from services import IAm
 import boto3
 from botocore.exceptions import ClientError
