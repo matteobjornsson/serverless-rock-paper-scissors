@@ -1,11 +1,9 @@
 # file contents adapted from AWS example
 # https://docs.aws.amazon.com/code-samples/latest/catalog/python-lambda-boto_client_examples-lambda_basics.py.html
 
-import io
 import time
 from services import IAm
 import boto3
-from zipfile import ZipFile
 from botocore.exceptions import ClientError
 import logging
 
@@ -16,21 +14,6 @@ lambda_client = boto3.client("lambda")
 retry_backoff = 2
 initial_wait = 1
 max_wait = 9  # only wait < 9s for funciton creation before giving up.
-
-
-def zip_lambda_code(file_name: str) -> bytes:
-    """
-    TODO: write function description
-    """
-    # buffer the zip file contents as a BytesIO object
-    bytes_buffer = io.BytesIO()
-    with ZipFile(bytes_buffer, "w") as zip:
-        # write the file to the buffer
-        zip.write(file_name)
-    # return the file position to the start (otherwise 'read()' returns nothing)
-    bytes_buffer.seek(0)
-    return bytes_buffer.read()
-
 
 def create_lambda_function(
     function_name: str, description: str, handler_name: str, iam_role, code_bytes: bytes
