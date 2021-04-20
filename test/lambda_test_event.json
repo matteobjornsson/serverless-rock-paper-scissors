@@ -1,0 +1,9 @@
+{
+  "Records": [
+    {
+      "Sns": {
+        "Message": "{\"messageBody\": \"test\", \"originationNumber\": \"+18001234567\"}"
+      }
+    }
+  ]
+}
