@@ -5,7 +5,11 @@
 
 # Serverless Rock Paper Scissors
 
-A one-click-deploy serverless implementation of Rock Paper Scissors. 
+A *mostly* one-click-deploy serverless implementation of Rock Paper Scissors. 
+
+<p align="center">
+  <img width="100%" src="img/architecture.png"> 
+</p>
 
 ## AWS Credentials
 
@@ -17,7 +21,15 @@ Once you have your credentials (access key id and secret access key) you will ne
 * `~/.aws/credentials` on macOS or Linux
 * `C:\Users\YOUR_USERNAME\.aws\credentials` on Windows. 
 
+You can do this using the `aws configure` command with the AWS CLI client, or by hand using a text editor. 
 
+Your credentials should have the following format:
+```
+[default]
+aws_access_key_id = YOUR_ACCESS_KEY_ID
+aws_secret_access_key = YOUR_SECRET_ACCESS_KEY
+```
+You will also need to follow a similar process to configure 
 
 TODO
 
