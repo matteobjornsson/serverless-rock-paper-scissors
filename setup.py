@@ -54,7 +54,6 @@ pinpoint_app_id = response["ApplicationResponse"]["Id"]
 
 Pinpoint.enable_pinpoint_SMS(pinpoint_app_id)
 print("pinpoint appID", pinpoint_app_id)
-input("this is where you should programmatically generate the lambda code")
 
 lines_to_inject = [f'pinpoint_app_id = "{pinpoint_app_id}"\n']
 # update the lambda file code with pinpoint app id before deploying
@@ -121,9 +120,10 @@ response = SNS.add_subscription(
 response = Dynamodb.create_table(db_table_name, db_key_schema, db_attribute_definitions)
 
 
-input("Pausing here for testing. Press enter to continue.")
+print("Services are deployed. You can now text your pinpoint number 'test' to confirm.")
 
 if teardown:
+    input("Press enter to begin teardown.")
     SNS.delete_topic(sns_in_topic)
     SNS.delete_topic(sns_out_topic)
     IAm.delete_role(iam_role)
@@ -132,4 +132,4 @@ if teardown:
     Dynamodb.delete_table(db_table_name)
     Pinpoint.delete_pinpoint_app(pinpoint_app_id)
     delete_lines(os.path.abspath(lambda_function_filename), lines_to_inject)
-    print("Service teardown complete")
+    print("Service teardown complete.")
