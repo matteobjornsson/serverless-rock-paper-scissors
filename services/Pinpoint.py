@@ -54,6 +54,7 @@ def enable_pinpoint_SMS(applicationID: str) -> dict:
         logging.info("Pinpoint SMS Enabled.")
         return response
 
+
 def send_SMS_message(phone_number: str, message: str, pinpoint_app_id: str) -> None:
     # Create a new client and specify a region.
     client = boto3.client("pinpoint")
@@ -63,24 +64,21 @@ def send_SMS_message(phone_number: str, message: str, pinpoint_app_id: str) -> N
             MessageRequest={
                 "Addresses": {phone_number: {"ChannelType": "SMS"}},
                 "MessageConfiguration": {
-                    "SMSMessage": {
-                        "Body": message,
-                        "MessageType": "TRANSACTIONAL"
-                    }
+                    "SMSMessage": {"Body": message, "MessageType": "TRANSACTIONAL"}
                 },
             },
         )
     except ClientError as e:
         logging.error(e.response["Error"]["Message"])
     else:
-        result = response['MessageResponse']['Result'][phone_number]
-        pprint.pprint(result)
-        if result['DeliveryStatus'] == 'PERMANENT_FAILURE':
+        result = response["MessageResponse"]["Result"][phone_number]
+        if result["DeliveryStatus"] == "PERMANENT_FAILURE":
             logging.error("Message not delivered: %s", result)
-        elif result['DeliveryStatus'] == 'SUCCESSFUL':
+        elif result["DeliveryStatus"] == "SUCCESSFUL":
             logging.info("Message sent!")
         else:
             logging.warn("Unknown delivery status of SMS message")
+
 
 if __name__ == "__main__":
     # test create, enable, and text a number

@@ -56,11 +56,13 @@ Pinpoint.enable_pinpoint_SMS(pinpoint_app_id)
 print("pinpoint appID", pinpoint_app_id)
 input("this is where you should programmatically generate the lambda code")
 
-lines_to_inject = [
-    f"applicationId = \"{pinpoint_app_id}\"\n"
-]
+lines_to_inject = [f'applicationId = "{pinpoint_app_id}"\n']
 # update the lambda file code with pinpoint app id before deploying
-insert_lines_at_keyword(os.path.abspath(lambda_function_filename), lines_to_inject, "insert new parameters after this line:")
+insert_lines_at_keyword(
+    os.path.abspath(lambda_function_filename),
+    lines_to_inject,
+    "insert new parameters after this line:",
+)
 
 ###########
 # LAMBDA  #
@@ -83,7 +85,6 @@ response = Lambda.create_lambda_function(
     function_code,
 )
 function_arn = response["FunctionArn"]
-
 
 
 # create sns topic to handle outgoing SMS messages from Lambda

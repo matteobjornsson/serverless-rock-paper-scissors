@@ -15,6 +15,7 @@ retry_backoff = 2
 initial_wait = 1
 max_wait = 9  # only wait < 9s for funciton creation before giving up.
 
+
 def create_lambda_function(
     function_name: str, description: str, handler_name: str, iam_role, code_bytes: bytes
 ) -> dict:

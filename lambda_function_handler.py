@@ -23,7 +23,6 @@ def lambda_handler(event, context):
     # store them together
     incoming_msg = [msg_txt, fromNumber]
 
-    
     sns_client = boto3.client("sns", region_name="us-east-1")
     response = sns_client.publish(
         TargetArn="arn:aws:sns:us-east-1:802108040626:rps_outgoing_sms_test",
@@ -47,9 +46,7 @@ def lambda_handler(event, context):
         logger.info("DB entry made!")
 
     try:
-        response = table.get_item(
-            Key={"phone_number": fromNumber, "round": round}
-        )
+        response = table.get_item(Key={"phone_number": fromNumber, "round": round})
         logger.info(str(response["Item"]))
     except ClientError as e:
         logger.error(e.response["Error"]["Message"])
@@ -66,10 +63,7 @@ def lambda_handler(event, context):
             MessageRequest={
                 "Addresses": {fromNumber: {"ChannelType": "SMS"}},
                 "MessageConfiguration": {
-                    "SMSMessage": {
-                        "Body": message,
-                        "MessageType": "TRANSACTIONAL"
-                    }
+                    "SMSMessage": {"Body": message, "MessageType": "TRANSACTIONAL"}
                 },
             },
         )

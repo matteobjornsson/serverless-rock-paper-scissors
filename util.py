@@ -15,12 +15,13 @@ def return_zipped_bytes(file_name: str) -> bytes:
     bytes_buffer.seek(0)
     return bytes_buffer.read()
 
+
 def insert_lines_at_keyword(file_path: str, lines: list, keyword: str) -> None:
-    with open(file_path, 'r+') as filehandler:
+    with open(file_path, "r+") as filehandler:
         file_lines = filehandler.readlines()
         index = get_keyword_index(file_lines, keyword)
         for line in lines:
-            file_lines.insert(index+1, line)
+            file_lines.insert(index + 1, line)
         filehandler.seek(0)
         filehandler.writelines(file_lines)
         filehandler.truncate()
@@ -32,13 +33,12 @@ def get_keyword_index(string_list: list, keyword: str) -> int:
             return i
     return -1
 
-def delete_lines(file_path: str, line_list: list)-> None:
-    with open(file_path, 'r+') as filehandler:
+
+def delete_lines(file_path: str, line_list: list) -> None:
+    with open(file_path, "r+") as filehandler:
         file_lines = filehandler.readlines()
         filehandler.seek(0)
         for line in file_lines:
             if line not in line_list:
                 filehandler.write(line)
         filehandler.truncate()
-        
-
