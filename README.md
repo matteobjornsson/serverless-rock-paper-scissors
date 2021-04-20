@@ -63,7 +63,7 @@ python setup.py
 ```
 This will automatically deploy all of the services and their required permission configurations, besides requesting a phone number. 
 ## 2. Request A Phone Number
-This game is SMS, so you'll need an AWS phone number to send text messages to. 
+This game is played via SMS, so you'll need an AWS phone number to send text messages to. 
 
 Sign-in to the AWS console and navigte to the Pinpoint Service. From there, navigate to `Settings > SMS and Voice`. Here you will see a page where, at the bottom, you can request a phone number to be associated with your AWS account.
 
