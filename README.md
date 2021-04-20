@@ -3,10 +3,13 @@
   <img width="20%" src="img/rock.png"> <img width="20%" src="img/paper.png"> <img width="20%" src="img/scissors.png">
 </p>
 
-# Serverless Rock Paper Scissors
+<h1  align="center">
+  Rock Paper Scissors
+</h1>
 
-A *mostly* one-click-deploy serverless implementation of Rock Paper Scissors. 
-
+<h3 align="center">
+  A <em> mostly </em> one-click-deploy serverless implementation.
+</h3>
 
 <p align="center">
   <img width="100%" src="img/architecture.png"> 
@@ -49,12 +52,41 @@ This project uses `python3.8` and the [AWS SDK for Python](https://aws.amazon.co
 ```
 pip install boto3
 ```
-With boto3 installed, you should be all set!
+# Deployment
 
-## Usage
+There are two steps to deployment:
 
+## 1. Deploy via Python Script
 To deploy the game you will need to run the setup file. 
 ```
 python setup.py
 ```
-This will automatically deploy all of the services and their required permission configurations. However, there is one thing you will be prompted to do which is request a phone number for your AWS account online. 
+This will automatically deploy all of the services and their required permission configurations, besides requesting a phone number. 
+## 2. Request A Phone Number
+This game is SMS, so you'll need an AWS phone number to send text messages to. 
+
+Sign-in to the AWS console and navigte to the Pinpoint Service. From there, navigate to `Settings > SMS and Voice`. Here you will see a page where, at the bottom, you can request a phone number to be associated with your AWS account.
+
+**You must request a Toll-free number to enable SMS capabilities.**
+
+<p align="center">
+  <img src="img/request_phone_number.png"> 
+</p>
+
+<p align="center">
+  <img src="img/phone_config.png"> 
+</p>
+
+
+This will cost about one or two dollars per month. You can configure your projects to limit the total amount you are willing to spend on SMS messages. 
+
+Once you have a phone number you must turn on Two-way SMS. This setting can be accessed by clicking on your new phone number and scrolling to the bottom of the page and clicking "**Two-way SMS**". Here you must select your inbound SNS topic to send all incoming text messages to. 
+
+<p align="center">
+  <img src="img/two_way_sms.png"> 
+</p>
+
+
+# Usage
+
+Send a text `test` to your new phone number. 
