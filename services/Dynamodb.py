@@ -1,4 +1,5 @@
 import pprint
+from threading import Condition
 import time
 import boto3
 import json
@@ -9,9 +10,10 @@ logging.basicConfig(filename="rps.log", level=logging.INFO)
 
 dynamodb_client = boto3.client("dynamodb")
 # parameters for exponential backoff
-initial_wait = 1
-max_wait = 9
-retry_backoff = 2
+# parameters for exponential backoff
+RETRY_BACKOFF_MULTIPLIER = 2
+INITIAL_WAIT_SECONDS = 1
+MAX_WAIT_SECONDS = 9  # only wait < 9s for funciton creation before giving up.
 
 
 def create_table(
@@ -61,18 +63,18 @@ def delete_table(table_name: str) -> dict:
     """
     TODO: write function description
     """
-    delay = initial_wait
-    while delay < max_wait:
+    delay = INITIAL_WAIT_SECONDS
+    while delay < MAX_WAIT_SECONDS:
         try:
             response = dynamodb_client.delete_table(TableName=table_name)
         except ClientError as error:
             if (
                 error.response["Error"]["Code"] == "ResourceInUseException"
-                and delay < max_wait
+                and delay < MAX_WAIT_SECONDS
             ):
                 logging.error("Cannot delete yet table in use ...")
                 time.sleep(delay)
-                delay = delay * retry_backoff
+                delay = delay * RETRY_BACKOFF_MULTIPLIER
             else:
                 logging.error(error.response["Error"]["Code"])
                 logging.error("Could not delete dynamodb table %s.", table_name)
@@ -80,6 +82,18 @@ def delete_table(table_name: str) -> dict:
             # table_arn = response['TableDescription']['TableArn']
             logging.info("Dynamodb Table %s deleted.", table_name)
             return response
+
+
+def table_exists(table_name: str) -> bool:
+    try:
+        dynamodb_client.describe_table(TableName=table_name)
+        return True
+    except ClientError as error:
+        if error.response["Error"]["Code"] == "ResourceNotFoundException":
+            return False
+        else:
+            raise
+
 
 
 # response = create_table("test_table2", key_schema, attribute_definitions)
