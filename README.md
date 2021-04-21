@@ -15,9 +15,10 @@
   <img width="100%" src="img/architecture.png"> 
 </p>
 
-## Overview
 
 This repository contains the code and configurations to deploy a small set of AWS services used to play rock paper scissors via SMS. Any two players can text the Amazon Pinpoint number a number of set commands to play rock-paper-scissors with a friend. The pinpoint access point sends incoming messages to a Simple Notification Service topic, which triggers a Lambda function to process the game logic. The Lambda function uses DynamoDB to store state such as players and their throws. The Lambda function sends an SMS back to the original players notifying them of their result. 
+# Environment 
+
 ## AWS Credentials
 
 Running this code requires you to have an AWS account and to have your AWS credentials configured on the machine you are using to run this code. If you already have AWS credentials set up you can skip this section.
