@@ -2,6 +2,8 @@
 # https://docs.aws.amazon.com/code-samples/latest/catalog/python-lambda-boto_client_examples-lambda_basics.py.html
 
 import time
+
+from botocore import retryhandler
 from util import return_zipped_bytes
 from services import IAm
 import boto3
@@ -12,9 +14,9 @@ logging.basicConfig(filename="rps.log", level=logging.INFO)
 
 lambda_client = boto3.client("lambda")
 # parameters for exponential backoff
-retry_backoff = 2
-initial_wait = 1
-max_wait = 9  # only wait < 9s for funciton creation before giving up.
+RETRY_BACKOFF_MULTIPLIER = 2
+INITIAL_WAIT_SECONDS = 1
+MAX_WAIT_SECONDS = 9  # only wait < 9s for funciton creation before giving up.
 
 
 def create_lambda_function(
@@ -23,9 +25,9 @@ def create_lambda_function(
     """
     TODO: write function description
     """
-    delay = initial_wait
+    delay = INITIAL_WAIT_SECONDS
     # add in exponential backoff waiting for AWS services (iam_role) to deploy and connect
-    while delay < max_wait:
+    while delay < MAX_WAIT_SECONDS:
         try:
             response = lambda_client.create_function(
                 FunctionName=function_name,
@@ -40,10 +42,10 @@ def create_lambda_function(
             if "Function already exist" in e.response["Error"]["Message"]:
                 logging.warning("The function %s already exists.", function_name)
                 return get_function(function_name)
-            elif delay < max_wait:
+            elif delay < MAX_WAIT_SECONDS:
                 print("Waiting for resources to connect...")
                 time.sleep(delay)
-                delay = delay * retry_backoff
+                delay = delay * RETRY_BACKOFF_MULTIPLIER
             else:
                 logging.error(e.response["Error"]["Code"])
                 logging.error("Couldn't create function %s.", function_name)
@@ -82,9 +84,9 @@ def update_lambda_code(
     """
     TODO: write function description
     """
-    delay = initial_wait
+    delay = INITIAL_WAIT_SECONDS
     # add in exponential backoff waiting for AWS services (iam_role) to deploy and connect
-    while delay < max_wait:
+    while delay < MAX_WAIT_SECONDS:
         try:
             response = lambda_client.update_function_code(
                 FunctionName="string",
@@ -95,9 +97,9 @@ def update_lambda_code(
         except ClientError as e:
             print("Waiting for resources to connect...")
             time.sleep(delay)
-            delay = delay * retry_backoff
+            delay = delay * RETRY_BACKOFF_MULTIPLIER
 
-            if delay >= max_wait:
+            if delay >= MAX_WAIT_SECONDS:
                 logging.error(e.response["Error"]["Message"])
                 logging.error("Couldn't update function %s.", function_name)
                 raise
@@ -166,7 +168,7 @@ if __name__ == "__main__":
 
     iam_policy = IAm.create_policy(lambda_policy_name, lambda_policy_json)
     iam_role = IAm.create_role(lambda_role_name, assume_role_json, [iam_policy.arn])
-    function_code = zip_lambda_code(lambda_function_filename)
+    function_code = return_zipped_bytes(lambda_function_filename)
 
     response = create_lambda_function(
         lambda_function_name,
