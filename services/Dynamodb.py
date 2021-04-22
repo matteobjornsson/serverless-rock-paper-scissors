@@ -171,35 +171,10 @@ if __name__ == "__main__":
     put_item(table_name, {"phone_number":"+18001234567","round":1, "throw":"rock"})
     put_item(table_name, {"phone_number":"+18001234567","round":1, "throw":"paper"})
     put_item(table_name, {"phone_number":"+18001234567","round":2, "throw":"rock"})
-    put_item(table_name, {"phone_number":"+18001234567","round":2, "throw":"scissors"})
-
+    response = put_item(table_name, {"phone_number":"+18001234567","round":2, "throw":"scissors"})
+    pprint.pprint(response)
     item = get_item(table_name, {"phone_number":"+18001234567", "round":"1"})
     if item:
         print(item)
     else:
         print("no item")
-
-    result = key_eq_attr_filter_query(table_name, "phone_number", "+18001234567","round","1")
-    if result:
-        pprint.pprint(result)
-    else:
-        print("Query returned no results")
-
-    result = key_eq_query(table_name, "phone_number","+1802342s2211")
-    if result:
-        pprint.pprint(result)
-    else:
-        print("Query returned no results")
-
-
-    result = key_eq_query(table_name, "phone_number","+18001234567")
-    if result:
-        pprint.pprint(result)
-    else:
-        print("Query returned no results")
-
-    result = key_begins_with_query(table_name, "phone_number", "+")
-    if result:
-        pprint.pprint(result)
-    else:
-        print("Query returned no results")
