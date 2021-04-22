@@ -8,7 +8,7 @@ logging.basicConfig(filename="rps.log", level=logging.INFO)
 
 # Logic flags
 TEARDOWN = True
-LOCKING = False
+LOCKING = True
 
 # service names and parameters
 SNS_INCOMING_SMS_TOPIC_NAME = "rps_incoming_sms_test"
