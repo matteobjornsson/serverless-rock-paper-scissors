@@ -47,7 +47,10 @@ def process_msg(msg, number) -> None:
     :param msg: a list consisting of [message text, phone number], both strings
     """
     if msg in ["rock", "paper", "scissors"]:
-        process_throw(msg, number)
+        if LOCKING:
+            process_throw_with_locking(msg, number)
+        else:
+            process_throw_without_locking(msg, number)
     elif msg == "test":
         send_sms(number, "ROCK PAPER SCISSORS:\nYour RPS game is up and running.")
     else:
@@ -65,7 +68,7 @@ class FailedToReleaseLock(Exception):
     pass
 
 
-def process_throw(current_throw, current_number):
+def process_throw_with_locking(current_throw, current_number):
     self_id = str(uuid.uuid4())
     lock_acquired = exponential_change_lock_retry(acquire_lock, "throw_lock", self_id)
     if lock_acquired:
@@ -83,7 +86,7 @@ def process_throw(current_throw, current_number):
             )
             send_sms(current_number, "ROCK PAPER SCISSORS:\n" + winner_message)
             delete_item({"state": "opponent"})
-            logger.info("Game completed: %s", winner_message)
+            logger.info("Game completed.")
         else:
             put_item(
                 {
@@ -105,6 +108,31 @@ def process_throw(current_throw, current_number):
     else:
         logger.exception("Failed to acquire lock %s", self_id)
         raise FailedToAcquireLock
+
+
+def process_throw_without_locking(current_throw, current_number):
+    opponent = get_item({"state": "opponent"})
+
+    if opponent:
+        winner_message = determine_winner(
+            [opponent["throw"], opponent["phone_number"]],
+            [current_throw, current_number],
+        )
+
+        send_sms(opponent["phone_number"], "ROCK PAPER SCISSORS:\n" + winner_message)
+        send_sms(current_number, "ROCK PAPER SCISSORS:\n" + winner_message)
+
+        delete_item({"state": "opponent"})
+        logger.info("Game completed: %s", winner_message)
+    else:
+        put_item(
+            {
+                "state": "opponent",
+                "throw": current_throw,
+                "phone_number": current_number,
+            }
+        )
+        send_sms(current_number, "ROCK PAPER SCISSORS:\nWaiting for opponent...")
 
 
 def determine_winner(first_throw, second_throw):
@@ -272,7 +300,7 @@ if __name__ == "__main__":
 
     with open("test/lambda_test_event.json") as file:
         event_json = file.read()
-    time.sleep(1)
+    # Start two threads at the same time to demo locking 
     event = json.loads(event_json)
     t1 = Thread(
         target=lambda_handler,
