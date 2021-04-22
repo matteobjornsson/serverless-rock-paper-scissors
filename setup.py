@@ -65,12 +65,13 @@ Pinpoint.enable_pinpoint_SMS(pinpoint_app_id)
 print("pinpoint appID", pinpoint_app_id)
 
 # NOTE: The following code writes these parameters into the lambda handler file.
-# The lambda file has its own defaults for testing purposes.
+# This tightly couples the files and makes it so the handler cannot run on its own.
+# this is a little hacky, feel free to improve upon it. 
 lines_to_inject = [
-    f"PINPOINT_APP_ID = '{pinpoint_app_id}'\n",
-    f"DB_TABLE_NAME = '{DB_TABLE_NAME}'\n",
+    f'PINPOINT_APP_ID = "{pinpoint_app_id}"\n',
+    f'DB_TABLE_NAME = "{DB_TABLE_NAME}"\n',
     f"LOCKING = {LOCKING}\n",
-    f"LOCK_TABLE_NAME = '{LOCK_TABLE_NAME}'\n",
+    f'LOCK_TABLE_NAME = "{LOCK_TABLE_NAME}"\n',
     f"LOCK_EXPIRATION_TIME_MS = {LOCK_EXPIRATION_TIME_MS}\n",
     f"LOCK_RETRY_BACKOFF_MULTIPLIER = {LOCK_RETRY_BACKOFF_MULTIPLIER}\n",
     f"INITIAL_LOCK_WAIT_SECONDS = {INITIAL_LOCK_WAIT_SECONDS}\n",

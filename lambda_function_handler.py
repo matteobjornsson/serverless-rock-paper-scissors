@@ -3,8 +3,8 @@ import boto3
 import re
 import time
 import json
-from botocore.exceptions import ClientError
 import datetime
+from botocore.exceptions import ClientError
 from boto3.dynamodb.conditions import Attr
 
 db_table_name = "players"
@@ -12,16 +12,6 @@ db_table_name = "players"
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 
-# These are default parameters that will be reassigned at runtime following
-# the 'insert new parameters' line
-PINPOINT_APP_ID = "37a9724008a24fb5b9695588270da4dd"
-DB_TABLE_NAME = "game_table"
-LOCKING = False
-LOCK_TABLE_NAME = "lock_table"
-LOCK_EXPIRATION_TIME_MS = 5000
-LOCK_RETRY_BACKOFF_MULTIPLIER = 2
-INITIAL_LOCK_WAIT_SECONDS = 0.05
-MAX_LOCK_WAIT_SECONDS = 3
 
 # insert new parameters after this line:
 
@@ -124,7 +114,9 @@ def send_sms(phone_number: str, message: str) -> None:
     except ClientError as e:
         logger.error(e.response["Error"]["Message"])
     else:
-        delivery_status = response["MessageResponse"]["Result"][phone_number]["DeliveryStatus"]
+        delivery_status = response["MessageResponse"]["Result"][phone_number][
+            "DeliveryStatus"
+        ]
         if delivery_status == "SUCCESSFUL":
             logger.info(f"Message {message} sent to {phone_number} successfully.")
         else:
