@@ -6,34 +6,43 @@ import pprint
 
 logging.basicConfig(filename="rps.log", level=logging.INFO)
 
+# Logic flags
+TEARDOWN = True
+LOCKING = False
+
 # service names and parameters
-sns_incoming_SMS_topic_name = "rps_incoming_sms_test"
-sns_outgoing_SMS_topic_name = "rps_outgoing_sms_test"
-lambda_policy_name = "BasicLambdaExecutionRoleDynamoCRUD"
-lambda_policy_file_name = "policy/lambda_policy.json"
-lambda_assume_role_policy_file_name = "policy/lambda_assume_role_policy.json"
-lambda_function_filename = "lambda_function_handler.py"
-lambda_handler_name = "lambda_function_handler.lambda_handler"
-lambda_role_name = "rps-lambda-role_test"
-lambda_function_name = "rps-lambda-function_test"
-lamda_function_description = "Rock Paper Scissors lambda function_test"
-pinpoint_app_name = "rock_paper_scissors_test"
-db_table_name = "players"
-db_key_schema = [
+SNS_INCOMING_SMS_TOPIC_NAME = "rps_incoming_sms_test"
+LAMBDA_POLICY_NAME = "BasicLambdaExecutionRoleDynamoCRUD"
+LAMBDA_POLICY_FILE_NAME = "policy/lambda_policy.json"
+LAMBDA_ASSUME_ROLE_POLICY_FILE_NAME = "policy/lambda_assume_role_policy.json"
+LAMBDA_FUNCTION_FILE_NAME = "lambda_function_handler.py"
+LAMBDA_HANDLER_NAME = "lambda_function_handler.lambda_handler"
+LAMBDA_ROLE_NAME = "rps-lambda-role_test"
+LAMBDA_FUNCTION_NAME = "rps-lambda-function_test"
+LAMBDA_FUNCTION_DESCRIPTION = "Rock Paper Scissors lambda function_test"
+# parameters for exponential backoff
+LOCK_RETRY_BACKOFF_MULTIPLIER = 2
+INITIAL_LOCK_WAIT_SECONDS = 0.05
+MAX_LOCK_WAIT_SECONDS = 3
+PINPOINT_APP_NAME = "rock_paper_scissors_test"
+DB_TABLE_NAME = "players"
+DB_KEY_SCHEMA = [
     {"AttributeName": "phone_number", "KeyType": "HASH"},  # Partition key
     {"AttributeName": "round", "KeyType": "RANGE"},  # Partition key
 ]
-db_attribute_definitions = [
+DB_ATTRIBUTE_DEFINITION = [
     {"AttributeName": "phone_number", "AttributeType": "S"},
     {"AttributeName": "round", "AttributeType": "S"},
 ]
-teardown = True
+LOCK_EXPIRATION_TIME_MS = 5000
+LOCK_TABLE_NAME = "lock_table"
+
 
 ########
 # SNS  #
 ########
 # create sns topic to handle incoming SMS messages from Pinpoint
-sns_in_topic = SNS.create_topic(sns_incoming_SMS_topic_name)
+sns_in_topic = SNS.create_topic(SNS_INCOMING_SMS_TOPIC_NAME)
 # add a policy to allow Pinpoint to publish to this SNS topic
 pinpoint_policy_statement = {
     "Sid": "PinpointPublish",
@@ -49,16 +58,27 @@ SNS.add_policy_statement(sns_in_topic, pinpoint_policy_statement)
 # PINPOINT  #
 #############
 # Create pinpoint app to handle incoming SMS
-response = Pinpoint.create_pinpoint_app(pinpoint_app_name)
+response = Pinpoint.create_pinpoint_app(PINPOINT_APP_NAME)
 pinpoint_app_id = response["ApplicationResponse"]["Id"]
 
 Pinpoint.enable_pinpoint_SMS(pinpoint_app_id)
 print("pinpoint appID", pinpoint_app_id)
 
-lines_to_inject = [f'pinpoint_app_id = "{pinpoint_app_id}"\n']
-# update the lambda file code with pinpoint app id before deploying
+# NOTE: The following code writes these parameters into the lambda handler file.
+# The lambda file has its own defaults for testing purposes.
+lines_to_inject = [
+    f"PINPOINT_APP_ID = '{pinpoint_app_id}'\n",
+    f"DB_TABLE_NAME = '{DB_TABLE_NAME}'\n",
+    f"LOCKING = {LOCKING}\n",
+    f"LOCK_TABLE_NAME = '{LOCK_TABLE_NAME}'\n",
+    f"LOCK_EXPIRATION_TIME_MS = {LOCK_EXPIRATION_TIME_MS}\n",
+    f"LOCK_RETRY_BACKOFF_MULTIPLIER = {LOCK_RETRY_BACKOFF_MULTIPLIER}\n",
+    f"INITIAL_LOCK_WAIT_SECONDS = {INITIAL_LOCK_WAIT_SECONDS}\n",
+    f"MAX_LOCK_WAIT_SECONDS = {MAX_LOCK_WAIT_SECONDS}\n",
+]
+# update the lambda file code with new parameters before deploying
 insert_lines_at_keyword(
-    os.path.abspath(lambda_function_filename),
+    os.path.abspath(LAMBDA_FUNCTION_FILE_NAME),
     lines_to_inject,
     "insert new parameters after this line:",
 )
@@ -67,41 +87,29 @@ insert_lines_at_keyword(
 # LAMBDA  #
 ###########
 # create lambda function to handle Rock Paper Scissors logic when SMS are received
-with open(lambda_policy_file_name) as file:
+with open(LAMBDA_POLICY_FILE_NAME) as file:
     lambda_policy_json = file.read()
-with open(lambda_assume_role_policy_file_name) as file:
+with open(LAMBDA_ASSUME_ROLE_POLICY_FILE_NAME) as file:
     assume_role_json = file.read()
 
-iam_policy = IAm.create_policy(lambda_policy_name, lambda_policy_json)
-iam_role = IAm.create_role(lambda_role_name, assume_role_json, [iam_policy.arn])
-function_code = return_zipped_bytes(lambda_function_filename)
+iam_policy = IAm.create_policy(LAMBDA_POLICY_NAME, lambda_policy_json)
+iam_role = IAm.create_role(LAMBDA_ROLE_NAME, assume_role_json, [iam_policy.arn])
+function_code = return_zipped_bytes(LAMBDA_FUNCTION_FILE_NAME)
 
 response = Lambda.create_lambda_function(
-    lambda_function_name,
-    lamda_function_description,
-    lambda_handler_name,
+    LAMBDA_FUNCTION_NAME,
+    LAMBDA_FUNCTION_DESCRIPTION,
+    LAMBDA_HANDLER_NAME,
     iam_role,
     function_code,
 )
 function_arn = response["FunctionArn"]
 
 
-# create sns topic to handle outgoing SMS messages from Lambda
-sns_out_topic = SNS.create_topic(sns_outgoing_SMS_topic_name)
-# add a policy to allow Lambda to publish to this SNS topic
-lambda_policy_statement = {
-    "Sid": "LambdaPublish",
-    "Effect": "Allow",
-    "Principal": {"AWS": iam_role.arn},
-    "Action": "sns:Publish",
-    "Resource": sns_out_topic.arn,
-}
-SNS.add_policy_statement(sns_out_topic, lambda_policy_statement)
-
 # Give the sns topic permission to invoke the Lambda function
 Lambda.add_permission(
     action="lambda:InvokeFunction",
-    function_name=lambda_function_name,
+    function_name=LAMBDA_FUNCTION_NAME,
     principal="sns.amazonaws.com",
     source_arn=sns_in_topic.arn,
     statement_id="sns",
@@ -117,19 +125,29 @@ response = SNS.add_subscription(
 #############
 # DYNAMODB  #
 #############
-response = Dynamodb.create_table(db_table_name, db_key_schema, db_attribute_definitions)
+game_table = Dynamodb.create_table(
+    DB_TABLE_NAME, DB_KEY_SCHEMA, DB_ATTRIBUTE_DEFINITION
+)
 
+if LOCKING:
+    lock_table = Dynamodb.create_table(
+        table_name=LOCK_TABLE_NAME,
+        key_schema=[{"AttributeName": "lock_name", "KeyType": "HASH"}],
+        attribute_definitions=[{"AttributeName": "lock_name", "AttributeType": "S"}],
+    )
 
 print("Services are deployed. You can now text your pinpoint number 'test' to confirm.")
 
-if teardown:
-    input("Press enter to begin teardown.")
+if TEARDOWN:
+    input("Press enter to begin TEARDOWN.")
     SNS.delete_topic(sns_in_topic)
-    SNS.delete_topic(sns_out_topic)
     IAm.delete_role(iam_role)
     IAm.delete_policy(iam_policy)
-    Lambda.delete_lambda_function(lambda_function_name)
-    Dynamodb.delete_table(db_table_name)
+    Lambda.delete_lambda_function(LAMBDA_FUNCTION_NAME)
+    Dynamodb.delete_table(game_table.table_name)
     Pinpoint.delete_pinpoint_app(pinpoint_app_id)
-    delete_lines(os.path.abspath(lambda_function_filename), lines_to_inject)
-    print("Service teardown complete.")
+    delete_lines(os.path.abspath(LAMBDA_FUNCTION_FILE_NAME), lines_to_inject)
+    if LOCKING:
+        Dynamodb.delete_table(lock_table.table_name)
+
+    print("Service TEARDOWN complete.")
