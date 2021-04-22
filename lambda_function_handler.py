@@ -33,7 +33,8 @@ def lambda_handler(event, context):
 
         process_msg(msg_txt, fromNumber)
 
-    except:
+    except Exception as e:
+        logger.exception(str(e))
         return {"statusCode": 500}
     else:
         return {"statusCode": 200}
@@ -55,11 +56,16 @@ def process_msg(msg, number) -> None:
         )
         logger.error(f"ROCK PAPER SCISSORS:\nUnable to process input: {msg}")
 
+class FailedToAcquireLock(Exception):
+    pass
+class FailedToReleaseLock(Exception):
+    pass
 
 def process_throw(current_throw, current_number):
     self_id = str(uuid.uuid4())
     lock_acquired = exponential_change_lock_retry(acquire_lock, "throw_lock", self_id)
     if lock_acquired:
+
         opponent = get_item({"state": "opponent"})
 
         if opponent:
@@ -93,9 +99,10 @@ def process_throw(current_throw, current_number):
             pass
         else:
             logger.error("Failed to release lock %s", self_id)
+            raise FailedToReleaseLock
     else:
-        logger.error("Failed to acquire lock %s", self_id)
-
+        logger.exception("Failed to acquire lock %s", self_id)
+        raise FailedToAcquireLock
 
 def determine_winner(first_throw, second_throw):
     """
@@ -253,3 +260,14 @@ def exponential_change_lock_retry(func, *func_args):
             time.sleep(delay)
             delay = delay * LOCK_RETRY_BACKOFF_MULTIPLIER
     return lock_changed
+
+if __name__ == "__main__":
+    # this 'unit' test needs to be run after setup.py constructs the file, 
+    # or you'd need to add some parameters in temporarily. 
+    with open('test/lambda_test_event.json') as file:
+        event_json = file.read()
+    event = json.loads(event_json)
+    response = lambda_handler(event, {})
+    response = lambda_handler(event, {})
+
+    print(response)
