@@ -7,7 +7,6 @@ import datetime
 from botocore.exceptions import ClientError
 from boto3.dynamodb.conditions import Attr
 
-GAME_STATE_TABLE_NAME = "game_state"
 
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
