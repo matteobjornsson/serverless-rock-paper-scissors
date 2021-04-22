@@ -1,10 +1,10 @@
 import pprint
-from threading import Condition
 import time
 import boto3
-import json
-from botocore.exceptions import ClientError
 import logging
+
+from botocore.exceptions import ClientError
+from boto3.dynamodb.conditions import Key
 
 logging.basicConfig(filename="rps.log", level=logging.INFO)
 
@@ -94,6 +94,36 @@ def table_exists(table_name: str) -> bool:
             return False
         else:
             raise
+
+def put_item(table_name: str, item: dict):
+    # item must at least have keys that match table primary keys
+    try:
+        table = dynamodb_resource.Table(table_name)
+        response = table.put_item(Item=item)
+    except ClientError as e:
+        logging.error(e.response["Error"]["Message"])
+    else:
+        logging.info("DB entry made!")
+        return response
+
+
+def get_item(table_name: str, keys: dict) -> dict:
+    # keys must have only the dict keys that match table primary keys
+    try:
+        table = dynamodb_resource.Table(table_name)
+        item = table.get_item(Key=keys)
+    except ClientError as e:
+        logging.error(e.response["Error"]["Message"])
+    else:
+        logging.info("DB entry retrieved!")
+        return item
+
+def key_eq_query(table_name: str, key: str, value: str) -> dict:
+    table = dynamodb_resource.Table(table_name)
+    response = table.query(
+        KeyConditionExpression=Key(key).eq(value)
+    )
+    return response['Items']
 
 
 # response = create_table("test_table2", key_schema, attribute_definitions)
