@@ -48,9 +48,10 @@ def process_msg(msg, number) -> None:
     if msg in ["rock", "paper", "scissors"]:
         process_throw(msg, number)
     elif msg == "test":
-        send_sms(number, "Your RPS game is up and running.")
+        send_sms(number, "ROCK PAPER SCISSORS:\nYour RPS game is up and running.")
     else:
-        logger.error(f"Unable to process input: {msg}")
+        send_sms(number, f"ROCK PAPER SCISSORS:\nUnable to process input ... try again.")
+        logger.error(f"ROCK PAPER SCISSORS:\nUnable to process input: {msg}")
         
 
 
@@ -66,13 +67,13 @@ def process_throw(current_throw, current_number):
                 [current_throw, current_number]
                 )
 
-            send_sms(opponent['phone_number'], winner_message)
-            send_sms(current_number, winner_message)
+            send_sms(opponent['phone_number'], "ROCK PAPER SCISSORS:\n" + winner_message)
+            send_sms(current_number, "ROCK PAPER SCISSORS:\n" + winner_message)
             delete_item({"state":"opponent"})
             logger.info("Game completed: %s", winner_message)
         else:
             put_item({"state":"opponent", "throw": current_throw, "phone_number": current_number})
-            send_sms(current_number, "Waiting for opponent...")
+            send_sms(current_number, "ROCK PAPER SCISSORS:\nWaiting for opponent...")
 
         lock_released = exponential_change_lock_retry(release_lock, "throw_lock", self_id)
         if lock_released:
