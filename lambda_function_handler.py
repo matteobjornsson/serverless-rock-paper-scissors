@@ -1,16 +1,30 @@
 import logging
 import boto3
 import re
+import time
 import json
 from botocore.exceptions import ClientError
+import datetime
+from boto3.dynamodb.conditions import Attr
 
 db_table_name = "players"
 
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 
+# These are default parameters that will be reassigned at runtime following
+# the 'insert new parameters' line
+PINPOINT_APP_ID = "37a9724008a24fb5b9695588270da4dd"
+DB_TABLE_NAME = "game_table"
+LOCKING = False
+LOCK_TABLE_NAME = "lock_table"
+LOCK_EXPIRATION_TIME_MS = 5000
+LOCK_RETRY_BACKOFF_MULTIPLIER = 2
+INITIAL_LOCK_WAIT_SECONDS = 0.05
+MAX_LOCK_WAIT_SECONDS = 3
+
 # insert new parameters after this line:
-db_table_name = "players"
+
 # insert new parameters before this line.
 
 sns_client = boto3.client("sns")
@@ -32,6 +46,7 @@ def lambda_handler(event, context):
     return {"statusCode": 200}
 
 
+### Rock Paper Scissors methods ####################################
 def process_msg(msg, number):
     """
     Process the incoming message
@@ -71,6 +86,7 @@ def process_throw():
     pass
 
 
+### DB methods #####################################################
 def put_item(item: dict):
     # item must at least have keys that match table primary keys
     try:
@@ -93,10 +109,11 @@ def get_item(keys: dict) -> dict:
         return item
 
 
+### Pinpoint methods #####################################################
 def send_sms(phone_number: str, message: str) -> None:
     try:
         response = pinpoint_client.send_messages(
-            ApplicationId=pinpoint_app_id,
+            ApplicationId=PINPOINT_APP_ID,
             MessageRequest={
                 "Addresses": {phone_number: {"ChannelType": "SMS"}},
                 "MessageConfiguration": {
@@ -104,8 +121,81 @@ def send_sms(phone_number: str, message: str) -> None:
                 },
             },
         )
-        logger.info(str(response))
     except ClientError as e:
         logger.error(e.response["Error"]["Message"])
     else:
-        logger.info("Message sent!")
+        delivery_status = response["MessageResponse"]["Result"][phone_number]["DeliveryStatus"]
+        if delivery_status == "SUCCESSFUL":
+            logger.info(f"Message {message} sent to {phone_number} successfully.")
+        else:
+            logger.error(f"Message {message} failed to send to {phone_number}.")
+
+
+### Lock methods #####################################################
+def ms_timestamp() -> int:
+    utc_epoch_time = datetime.datetime.utcnow() - datetime.datetime(1970, 1, 1)
+    return int(utc_epoch_time.total_seconds() * 1000)
+
+
+def get_lock_table(table_name: str):
+    try:
+        table = boto3.resource("dynamodb").Table(table_name)
+    except ClientError as e:
+        logger.exception("Could not get lock table.")
+        raise
+    else:
+        return table
+
+
+def acquire_lock(lock_name: str, self_id: str) -> bool:
+    table = get_lock_table(LOCK_TABLE_NAME)
+    try:
+        table.put_item(
+            Item={
+                "lock_name": lock_name,
+                "holder": self_id,
+                "time_acquired": ms_timestamp(),  # number type
+            },
+            ConditionExpression=Attr("lock_name").not_exists()
+            | Attr("time_acquired").lt(ms_timestamp() - LOCK_EXPIRATION_TIME_MS),
+        )
+    except ClientError as error:
+        error_code = error.response["Error"]["Code"]
+        if error_code == "ConditionalCheckFailedException":
+            logger.error("Could not acquire lock.")
+            return False
+        else:
+            raise
+    else:
+        logger.info("Lock acquired")
+        return True
+
+
+def release_lock(lock_name: str, self_id: str) -> bool:
+    try:
+        table = get_lock_table(LOCK_TABLE_NAME)
+        table.delete_item(
+            Key={"lock_name": lock_name}, ConditionExpression=Attr("holder").eq(self_id)
+        )
+    except ClientError as error:
+        if error.response["Error"]["Code"] == "ConditionalCheckFailedException":
+            return False
+        else:
+            raise
+    else:
+        return True
+
+
+def exponential_change_lock_retry(func, *func_args):
+    """
+    Retries acquire_lock or release_lock until lock changed or maximum desired time elapsed.
+    """
+    delay = INITIAL_LOCK_WAIT_SECONDS
+    lock_changed = False
+    while delay < MAX_LOCK_WAIT_SECONDS and not lock_changed:
+        lock_changed = func(*func_args)
+        if not lock_changed:
+            logger.info(f"Waiting for {delay} to retry {func.__name__}.")
+            time.sleep(delay)
+            delay = delay * LOCK_RETRY_BACKOFF_MULTIPLIER
+    return lock_changed
