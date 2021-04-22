@@ -3,7 +3,6 @@
 
 import time
 
-from botocore import retryhandler
 from util import return_zipped_bytes
 from services import IAm
 import boto3
