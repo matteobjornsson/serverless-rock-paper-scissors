@@ -40,7 +40,8 @@ def create_table(
             logging.exception("Could not create dynamodb table %s.", table_name)
             raise
     else:
-        # table_arn = response['TableDescription']['TableArn']
+        print(f"Waiting for table {table_name} to be created ...")
+        table.wait_until_exists()
         logging.info("Dynamodb Table %s Created.", table_name)
         return table
 
@@ -50,7 +51,7 @@ def get_table(table_name: str) -> dynamodb_resource.Table:
     TODO: write function description
     """
     try:
-        table = dynamodb_resource.describe_table(TableName=table_name)
+        table = dynamodb_client.describe_table(TableName=table_name)
     except ClientError as e:
         logging.error(e.response["Error"]["Message"])
         logging.exception("Couldn't get table %s.", table_name)
@@ -142,8 +143,13 @@ if __name__ == "__main__":
 
     table_name = "test_table"
     table = create_table(table_name, db_key_schema, db_attribute_definitions)
-    table = create_table(table_name, db_key_schema, db_attribute_definitions)
+    print(table.name)
     # response = dynamodb_client.describe_table(TableName=table_name)
     # pprint.pprint(response)
-    print()
+    put_item(table_name, {"phone_number":"+18001234567","round":"1", "throw":"rock"})
+    put_item(table_name, {"phone_number":"+18001234567","round":"1", "throw":"paper"})
+    put_item(table_name, {"phone_number":"+18001234567","round":"2"})
+    response = put_item(table_name, {"phone_number":"+18001234567","round":"2", "throw":"scissors"})
+    print(response)
+
     delete_table(table_name)
