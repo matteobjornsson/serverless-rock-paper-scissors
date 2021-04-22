@@ -1,13 +1,13 @@
 import logging
 import boto3
-import re
+import uuid
 import time
 import json
 import datetime
 from botocore.exceptions import ClientError
 from boto3.dynamodb.conditions import Attr
 
-db_table_name = "players"
+GAME_STATE_TABLE_NAME = "game_state"
 
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
@@ -19,7 +19,7 @@ logger.setLevel(logging.INFO)
 
 sns_client = boto3.client("sns")
 db_resource = boto3.resource("dynamodb")
-table = db_resource.Table(db_table_name)
+table = db_resource.Table(GAME_STATE_TABLE_NAME)
 pinpoint_client = boto3.client("pinpoint")
 
 
@@ -27,76 +27,126 @@ def lambda_handler(event, context):
 
     logger.info("Event: %s", event)
     # grab the event from pinpoint
-    pinpointEvent = json.loads(event["Records"][0]["Sns"]["Message"])
-    msg_txt = pinpointEvent["messageBody"].lower().strip()
-    fromNumber = pinpointEvent["originationNumber"]
+    try:
+        pinpointEvent = json.loads(event["Records"][0]["Sns"]["Message"])
+        msg_txt = pinpointEvent["messageBody"].lower().strip()
+        fromNumber = pinpointEvent["originationNumber"]
 
-    result = process_msg(msg_txt.lower().strip(), fromNumber)
+        process_msg(msg_txt, fromNumber)
 
-    return {"statusCode": 200}
+    except:
+        return {"statusCode":500}
+    else:
+        return {"statusCode": 200}
 
 
 ### Rock Paper Scissors methods ####################################
-def process_msg(msg, number):
+def process_msg(msg, number) -> None:
     """
     Process the incoming message
     :param msg: a list consisting of [message text, phone number], both strings
     """
-    # first get all entries associated with phone number
-
-    # matches on E.164 formatted phone numbers in the US
-    US_phone_regex = re.compile("^(\+)(\d{11})$")
-    if US_phone_regex.match(msg):
-        # register player and their opponent
-        # delete any old entries with different opponent
-        # save (player, opponent, round) to db with round == 0
-        # notify player they have been registered.
-        pass
-    elif msg in ["rock", "paper", "scissors"]:
-        # process throw
-        pass
+    if msg in ["rock", "paper", "scissors"]:
+        process_throw(msg, number)
     elif msg == "test":
         send_sms(number, "Your RPS game is up and running.")
     else:
-        # log problem
-        pass
+        logger.error(f"Unable to process input: {msg}")
+        
 
 
-def process_throw():
-    # acquire lock
-    #   if lock held by another process, wait?
-    #   if timeout then notify player of failure
-    # increment round
-    # check if throw exists for same round and opponent
-    #   if so, process throw and notify players of winner
-    #       delete finished rounds for player and opponent
-    #   if not, store throw, opponent, round
-    #       notify player they are waiting for player 2
-    # release lock
-    pass
+def process_throw(current_throw, current_number):
+    self_id = str(uuid.uuid4())
+    lock_acquired = exponential_change_lock_retry(acquire_lock, "throw_lock", self_id)
+    if lock_acquired:
+
+        opponent = get_item({"state":"opponent"})
+
+        if opponent:
+            winner_message = determine_winner(
+                [opponent['throw'],opponent['phone_number']], 
+                [current_throw, current_number]
+                )
+
+            send_sms(opponent['phone_number'], winner_message)
+            send_sms(current_number, winner_message)
+            delete_item({"state":"opponent"})
+            logger.info("Game completed: %s", winner_message)
+        else:
+            put_item({"state":"opponent", "throw": current_throw, "phone_number": current_number})
+            send_sms(current_number, "Waiting for opponent...")
+
+        lock_released = exponential_change_lock_retry(release_lock, "throw_lock", self_id)
+        if lock_released:
+            pass
+        else:
+            logger.error("Failed to release lock %s", self_id)
+    else:
+        logger.error("Failed to acquire lock %s", self_id)
+
+
+def determine_winner(first_throw, second_throw):
+    """
+    input parameters are each a list with contents: ["throw", "phone_number"]
+    returns a string of format "phone_number wins."
+    """
+    t1 = first_throw[0]
+    t2 = second_throw[0]
+
+    if t1 == t2:
+        response = "Tie! No winner"
+    elif t1 == "paper" and t2 == "rock":
+        response = first_throw[1] + " wins."
+    elif t1 == "scissors" and t2 == "rock":
+        response = second_throw[1] + " wins."
+    elif t1 == "rock" and t2 == "scissors":
+        response = first_throw[1] + " wins."
+    elif t1 == "paper" and t2 == "scissors":
+        response = first_throw[1] + " wins."
+    elif t1 == "scissors" and t2 == "paper":
+        response = first_throw[1] + " wins."
+    elif t1 == "rock" and t2 == "paper":
+        response = first_throw[1] + " wins."
+    else:
+        response = "Something went wrong..."
+
+    return response
 
 
 ### DB methods #####################################################
-def put_item(item: dict):
+def put_item(item: dict) -> None:
     # item must at least have keys that match table primary keys
     try:
-        response = table.put_item(Item=item)
+        table.put_item(Item=item)
     except ClientError as e:
         logger.error(e.response["Error"]["Message"])
     else:
-        logger.info("DB entry made!")
-        return response
+        logger.info(f"DB entry made {item}")
 
 
 def get_item(keys: dict) -> dict:
     # keys must have only the dict keys that match table primary keys
     try:
-        item = table.get_item(Key=keys)
+        response = table.get_item(Key=keys)
+    except ClientError as e:
+        logging.error(e.response["Error"]["Message"])
+    else:
+        if "Item" in response:
+            logging.info(f"DB entry retrieved {keys}")
+            return response['Item']
+        else:
+            logging.info(f"No entry retrieved for get: {keys}")
+            return None
+
+def delete_item(keys: dict) -> None:
+    # keys must have only the dict keys that match table primary keys
+    try:
+        table.delete_item(Key=keys)
     except ClientError as e:
         logger.error(e.response["Error"]["Message"])
     else:
-        logger.info("DB entry retrieved!")
-        return item
+        logger.info(f"DB item deleted made {keys}")
+
 
 
 ### Pinpoint methods #####################################################
@@ -154,7 +204,6 @@ def acquire_lock(lock_name: str, self_id: str) -> bool:
     except ClientError as error:
         error_code = error.response["Error"]["Code"]
         if error_code == "ConditionalCheckFailedException":
-            logger.error("Could not acquire lock.")
             return False
         else:
             raise
