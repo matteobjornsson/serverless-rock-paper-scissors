@@ -25,17 +25,15 @@ LOCK_RETRY_BACKOFF_MULTIPLIER = 2
 INITIAL_LOCK_WAIT_SECONDS = 0.05
 MAX_LOCK_WAIT_SECONDS = 3
 PINPOINT_APP_NAME = "rock_paper_scissors_test"
-DB_TABLE_NAME = "players"
-DB_KEY_SCHEMA = [
-    {"AttributeName": "phone_number", "KeyType": "HASH"},  # Partition key
-    {"AttributeName": "round", "KeyType": "RANGE"},  # Partition key
-]
-DB_ATTRIBUTE_DEFINITION = [
-    {"AttributeName": "phone_number", "AttributeType": "S"},
-    {"AttributeName": "round", "AttributeType": "S"},
-]
-LOCK_EXPIRATION_TIME_MS = 5000
+# Table names and schemas
+THROW_TABLE_NAME = "throws"
+THROW_TABLE_SCHEMA = [{"AttributeName": "throw", "KeyType": "HASH"}]
+THROW_TABLE_ATTR_DEFINITIONS = [{"AttributeName": "throw", "AttributeType": "S"}]
+# 
 LOCK_TABLE_NAME = "lock_table"
+LOCK_TABLE_SCHEMA = [{"AttributeName": "lock_name", "KeyType": "HASH"}],
+LOCK_TABLE_ATTR_DEFINITIONS =[{"AttributeName": "lock_name", "AttributeType": "S"}]
+LOCK_EXPIRATION_TIME_MS = 5000
 
 
 ########
@@ -68,7 +66,7 @@ Pinpoint.enable_pinpoint_SMS(pinpoint_app_id)
 # this is a little hacky, feel free to improve upon it. 
 lines_to_inject = [
     f'PINPOINT_APP_ID = "{pinpoint_app_id}"\n',
-    f'DB_TABLE_NAME = "{DB_TABLE_NAME}"\n',
+    f'THROW_TABLE_NAME = "{THROW_TABLE_NAME}"\n',
     f"LOCKING = {LOCKING}\n",
     f'LOCK_TABLE_NAME = "{LOCK_TABLE_NAME}"\n',
     f"LOCK_EXPIRATION_TIME_MS = {LOCK_EXPIRATION_TIME_MS}\n",
@@ -126,7 +124,7 @@ response = SNS.add_subscription(
 # DYNAMODB  #
 #############
 game_table = Dynamodb.create_table(
-    DB_TABLE_NAME, DB_KEY_SCHEMA, DB_ATTRIBUTE_DEFINITION
+    THROW_TABLE_NAME, THROW_TABLE_SCHEMA, THROW_TABLE_ATTR_DEFINITIONS
 )
 
 if LOCKING:
