@@ -9,6 +9,7 @@ import logging
 logging.basicConfig(filename="rps.log", level=logging.INFO)
 
 dynamodb_client = boto3.client("dynamodb")
+dynamodb_resource = boto3.resource("dynamodb")
 # parameters for exponential backoff
 # parameters for exponential backoff
 RETRY_BACKOFF_MULTIPLIER = 2
@@ -18,12 +19,12 @@ MAX_WAIT_SECONDS = 9  # only wait < 9s for funciton creation before giving up.
 
 def create_table(
     table_name: str, key_schema: list, attribute_definitions: list
-) -> dict:
+) -> dynamodb_resource.Table:
     """
     TODO: write function description
     """
     try:
-        response = dynamodb_client.create_table(
+        table = dynamodb_resource.create_table(
             TableName=table_name,
             KeySchema=key_schema,
             AttributeDefinitions=attribute_definitions,
@@ -44,19 +45,19 @@ def create_table(
         return response
 
 
-def get_table(table_name: str) -> dict:
+def get_table(table_name: str) -> dynamodb_resource.Table:
     """
     TODO: write function description
     """
     try:
-        response = dynamodb_client.describe_table(TableName=table_name)
+        table = dynamodb_resource.describe_table(TableName=table_name)
     except ClientError as e:
         logging.error(e.response["Error"]["Message"])
         logging.exception("Couldn't get table %s.", table_name)
         raise
     else:
         # rearrange response to match create_table() return
-        return {"TableDescription": response["Table"]}
+        return table
 
 
 def delete_table(table_name: str) -> dict:
@@ -95,7 +96,6 @@ def table_exists(table_name: str) -> bool:
             raise
 
 
-
 # response = create_table("test_table2", key_schema, attribute_definitions)
 # # table_arn = response['TableDescription']['TableArn']
 if __name__ == "__main__":
@@ -111,9 +111,8 @@ if __name__ == "__main__":
     ]
 
     table_name = "test_table"
-    response = create_table(table_name, db_key_schema, db_attribute_definitions)
-    pprint.pprint(response)
-    response = create_table(table_name, db_key_schema, db_attribute_definitions)
+    table = create_table(table_name, db_key_schema, db_attribute_definitions)
+    table = create_table(table_name, db_key_schema, db_attribute_definitions)
     # response = dynamodb_client.describe_table(TableName=table_name)
     # pprint.pprint(response)
     print()
