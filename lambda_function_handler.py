@@ -56,10 +56,14 @@ def process_msg(msg, number) -> None:
         )
         logger.error(f"ROCK PAPER SCISSORS:\nUnable to process input: {msg}")
 
+
 class FailedToAcquireLock(Exception):
     pass
+
+
 class FailedToReleaseLock(Exception):
     pass
+
 
 def process_throw(current_throw, current_number):
     self_id = str(uuid.uuid4())
@@ -77,9 +81,7 @@ def process_throw(current_throw, current_number):
             send_sms(
                 opponent["phone_number"], "ROCK PAPER SCISSORS:\n" + winner_message
             )
-            send_sms(
-                current_number, "ROCK PAPER SCISSORS:\n" + winner_message
-            )
+            send_sms(current_number, "ROCK PAPER SCISSORS:\n" + winner_message)
             delete_item({"state": "opponent"})
             logger.info("Game completed: %s", winner_message)
         else:
@@ -103,6 +105,7 @@ def process_throw(current_throw, current_number):
     else:
         logger.exception("Failed to acquire lock %s", self_id)
         raise FailedToAcquireLock
+
 
 def determine_winner(first_throw, second_throw):
     """
@@ -261,13 +264,29 @@ def exponential_change_lock_retry(func, *func_args):
             delay = delay * LOCK_RETRY_BACKOFF_MULTIPLIER
     return lock_changed
 
-if __name__ == "__main__":
-    # this 'unit' test needs to be run after setup.py constructs the file, 
-    # or you'd need to add some parameters in temporarily. 
-    with open('test/lambda_test_event.json') as file:
-        event_json = file.read()
-    event = json.loads(event_json)
-    response = lambda_handler(event, {})
-    response = lambda_handler(event, {})
 
-    print(response)
+if __name__ == "__main__":
+    # this 'unit' test needs to be run after setup.py constructs the file,
+    # or you'd need to add some parameters in temporarily.
+    from threading import Thread
+
+    with open("test/lambda_test_event.json") as file:
+        event_json = file.read()
+    time.sleep(1)
+    event = json.loads(event_json)
+    t1 = Thread(
+        target=lambda_handler,
+        args=(
+            event,
+            {},
+        ),
+    )
+    t2 = Thread(
+        target=lambda_handler,
+        args=(
+            event,
+            {},
+        ),
+    )
+    t1.start()
+    t2.start()
