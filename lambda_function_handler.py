@@ -58,7 +58,6 @@ def process_throw(current_throw, current_number):
     self_id = str(uuid.uuid4())
     lock_acquired = exponential_change_lock_retry(acquire_lock, "throw_lock", self_id)
     if lock_acquired:
-
         opponent = get_item({"state":"opponent"})
 
         if opponent:
@@ -207,7 +206,7 @@ def acquire_lock(lock_name: str, self_id: str) -> bool:
         else:
             raise
     else:
-        logger.info("Lock acquired")
+        logger.info("Lock acquired %s", self_id)
         return True
 
 
@@ -223,6 +222,7 @@ def release_lock(lock_name: str, self_id: str) -> bool:
         else:
             raise
     else:
+        logger.info("Lock released %s", self_id)
         return True
 
 
