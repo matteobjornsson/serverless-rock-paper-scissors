@@ -15,7 +15,7 @@ lambda_client = boto3.client("lambda")
 # parameters for exponential backoff
 RETRY_BACKOFF_MULTIPLIER = 1.5
 INITIAL_WAIT_SECONDS = 1
-MAX_WAIT_SECONDS = 18 # only wait < 9s for funciton creation before giving up.
+MAX_WAIT_SECONDS = 18  # only wait < 9s for funciton creation before giving up.
 
 
 def create_lambda_function(

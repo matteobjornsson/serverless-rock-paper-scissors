@@ -34,7 +34,7 @@ def lambda_handler(event, context):
         process_msg(msg_txt, fromNumber)
 
     except:
-        return {"statusCode":500}
+        return {"statusCode": 500}
     else:
         return {"statusCode": 200}
 
@@ -50,32 +50,45 @@ def process_msg(msg, number) -> None:
     elif msg == "test":
         send_sms(number, "ROCK PAPER SCISSORS:\nYour RPS game is up and running.")
     else:
-        send_sms(number, f"ROCK PAPER SCISSORS:\nUnable to process input ... try again.")
+        send_sms(
+            number, f"ROCK PAPER SCISSORS:\nUnable to process input ... try again."
+        )
         logger.error(f"ROCK PAPER SCISSORS:\nUnable to process input: {msg}")
-        
 
 
 def process_throw(current_throw, current_number):
     self_id = str(uuid.uuid4())
     lock_acquired = exponential_change_lock_retry(acquire_lock, "throw_lock", self_id)
     if lock_acquired:
-        opponent = get_item({"state":"opponent"})
+        opponent = get_item({"state": "opponent"})
 
         if opponent:
             winner_message = determine_winner(
-                [opponent['throw'],opponent['phone_number']], 
-                [current_throw, current_number]
-                )
+                [opponent["throw"], opponent["phone_number"]],
+                [current_throw, current_number],
+            )
 
-            send_sms(opponent['phone_number'], "ROCK PAPER SCISSORS:\n" + winner_message)
-            send_sms(current_number, "ROCK PAPER SCISSORS:\n" + winner_message)
-            delete_item({"state":"opponent"})
+            send_sms(
+                opponent["phone_number"], "ROCK PAPER SCISSORS:\n" + winner_message
+            )
+            send_sms(
+                current_number, "ROCK PAPER SCISSORS:\n" + winner_message
+            )
+            delete_item({"state": "opponent"})
             logger.info("Game completed: %s", winner_message)
         else:
-            put_item({"state":"opponent", "throw": current_throw, "phone_number": current_number})
+            put_item(
+                {
+                    "state": "opponent",
+                    "throw": current_throw,
+                    "phone_number": current_number,
+                }
+            )
             send_sms(current_number, "ROCK PAPER SCISSORS:\nWaiting for opponent...")
 
-        lock_released = exponential_change_lock_retry(release_lock, "throw_lock", self_id)
+        lock_released = exponential_change_lock_retry(
+            release_lock, "throw_lock", self_id
+        )
         if lock_released:
             pass
         else:
@@ -132,10 +145,11 @@ def get_item(keys: dict) -> dict:
     else:
         if "Item" in response:
             logging.info(f"DB entry retrieved {keys}")
-            return response['Item']
+            return response["Item"]
         else:
             logging.info(f"No entry retrieved for get: {keys}")
             return None
+
 
 def delete_item(keys: dict) -> None:
     # keys must have only the dict keys that match table primary keys
@@ -145,7 +159,6 @@ def delete_item(keys: dict) -> None:
         logger.error(e.response["Error"]["Message"])
     else:
         logger.info(f"DB item deleted made {keys}")
-
 
 
 ### Pinpoint methods #####################################################

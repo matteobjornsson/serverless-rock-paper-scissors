@@ -29,10 +29,10 @@ PINPOINT_APP_NAME = "rock_paper_scissors_test"
 GAME_STATE_TABLE_NAME = "game_state"
 GAME_STATE_TABLE_SCHEMA = [{"AttributeName": "state", "KeyType": "HASH"}]
 GAME_STATE_TABLE_ATTR_DEFINITIONS = [{"AttributeName": "state", "AttributeType": "S"}]
-# 
+#
 LOCK_TABLE_NAME = "lock_table"
-LOCK_TABLE_SCHEMA = [{"AttributeName": "lock_name", "KeyType": "HASH"}],
-LOCK_TABLE_ATTR_DEFINITIONS =[{"AttributeName": "lock_name", "AttributeType": "S"}]
+LOCK_TABLE_SCHEMA = [{"AttributeName": "lock_name", "KeyType": "HASH"}]
+LOCK_TABLE_ATTR_DEFINITIONS = [{"AttributeName": "lock_name", "AttributeType": "S"}]
 LOCK_EXPIRATION_TIME_MS = 5000
 
 
@@ -63,7 +63,7 @@ Pinpoint.enable_pinpoint_SMS(pinpoint_app_id)
 
 # NOTE: The following code writes these parameters into the lambda handler file.
 # This tightly couples the files and makes it so the handler cannot run on its own.
-# this is a little hacky, feel free to improve upon it. 
+# this is a little hacky, feel free to improve upon it.
 lines_to_inject = [
     f'PINPOINT_APP_ID = "{pinpoint_app_id}"\n',
     f'GAME_STATE_TABLE_NAME = "{GAME_STATE_TABLE_NAME}"\n',
@@ -124,9 +124,9 @@ response = SNS.add_subscription(
 # DYNAMODB  #
 #############
 game_table = Dynamodb.create_table(
-    table_name=GAME_STATE_TABLE_NAME, 
-    key_schema=GAME_STATE_TABLE_SCHEMA, 
-    attribute_definitions=GAME_STATE_TABLE_ATTR_DEFINITIONS
+    table_name=GAME_STATE_TABLE_NAME,
+    key_schema=GAME_STATE_TABLE_SCHEMA,
+    attribute_definitions=GAME_STATE_TABLE_ATTR_DEFINITIONS,
 )
 
 if LOCKING:

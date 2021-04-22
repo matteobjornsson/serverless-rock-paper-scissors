@@ -18,6 +18,7 @@ MAX_WAIT_SECONDS = 9  # only wait < 9s for funciton creation before giving up.
 dynamodb_client = boto3.client("dynamodb")
 dynamodb_resource = boto3.resource("dynamodb")
 
+
 def create_table(
     table_name: str, key_schema: list, attribute_definitions: list
 ) -> dynamodb_resource.Table:
@@ -97,6 +98,7 @@ def table_exists(table_name: str) -> bool:
         else:
             raise
 
+
 def put_item(table_name: str, item: dict):
     # item must at least have keys that match table primary keys
     try:
@@ -119,7 +121,7 @@ def get_item(table_name: str, keys: dict) -> dict:
     else:
         if "Item" in response:
             logging.info(f"DB entry retrieved {keys}")
-            return response['Item']
+            return response["Item"]
         else:
             logging.info(f"No entry retrieved for get: {keys}")
             return None
@@ -148,7 +150,6 @@ def get_item(table_name: str, keys: dict) -> dict:
 #     return response['Items']
 
 
-
 # response = create_table("test_table2", key_schema, attribute_definitions)
 # # table_arn = response['TableDescription']['TableArn']
 if __name__ == "__main__":
@@ -168,12 +169,14 @@ if __name__ == "__main__":
     # print(table.name)
     # response = dynamodb_client.describe_table(TableName=table_name)
     # pprint.pprint(response)
-    put_item(table_name, {"phone_number":"+18001234567","round":1, "throw":"rock"})
-    put_item(table_name, {"phone_number":"+18001234567","round":1, "throw":"paper"})
-    put_item(table_name, {"phone_number":"+18001234567","round":2, "throw":"rock"})
-    response = put_item(table_name, {"phone_number":"+18001234567","round":2, "throw":"scissors"})
+    put_item(table_name, {"phone_number": "+18001234567", "round": 1, "throw": "rock"})
+    put_item(table_name, {"phone_number": "+18001234567", "round": 1, "throw": "paper"})
+    put_item(table_name, {"phone_number": "+18001234567", "round": 2, "throw": "rock"})
+    response = put_item(
+        table_name, {"phone_number": "+18001234567", "round": 2, "throw": "scissors"}
+    )
     pprint.pprint(response)
-    item = get_item(table_name, {"phone_number":"+18001234567", "round":"1"})
+    item = get_item(table_name, {"phone_number": "+18001234567", "round": "1"})
     if item:
         print(item)
     else:
