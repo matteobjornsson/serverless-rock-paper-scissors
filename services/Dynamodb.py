@@ -5,6 +5,7 @@ import logging
 
 from botocore.exceptions import ClientError
 from boto3.dynamodb.conditions import Key
+from boto3.dynamodb.conditions import Attr
 
 logging.basicConfig(filename="rps.log", level=logging.INFO)
 
@@ -104,7 +105,7 @@ def put_item(table_name: str, item: dict):
     except ClientError as e:
         logging.error(e.response["Error"]["Message"])
     else:
-        logging.info("DB entry made!")
+        logging.info(f"DB entry made {item}")
         return response
 
 
@@ -112,19 +113,40 @@ def get_item(table_name: str, keys: dict) -> dict:
     # keys must have only the dict keys that match table primary keys
     try:
         table = dynamodb_resource.Table(table_name)
-        item = table.get_item(Key=keys)
+        response = table.get_item(Key=keys)
     except ClientError as e:
         logging.error(e.response["Error"]["Message"])
     else:
-        logging.info("DB entry retrieved!")
-        return item
+        if "Item" in response:
+            logging.info(f"DB entry retrieved {keys}")
+            return response['Item']
+        else:
+            logging.info(f"No entry retrieved for get: {keys}")
+            return None
 
-def key_eq_query(table_name: str, key: str, value: str) -> dict:
-    table = dynamodb_resource.Table(table_name)
-    response = table.query(
-        KeyConditionExpression=Key(key).eq(value)
-    )
-    return response['Items']
+
+# def key_eq_query(table_name: str, key: str, value: str) -> dict:
+#     table = dynamodb_resource.Table(table_name)
+#     response = table.query(
+#         KeyConditionExpression=Key(key).eq(value)
+#     )
+#     return response['Items']
+
+# def key_begins_with_query(table_name: str, key: str, value: str) -> dict:
+#     table = dynamodb_resource.Table(table_name)
+#     response = table.query(
+#         KeyConditionExpression=Key(key).begins_with(value)
+#     )
+#     return response['Items']
+
+# def key_eq_attr_filter_query(table_name: str, key:str, key_value: str, attr: str, attr_value: str) -> dict:
+#     table = dynamodb_resource.Table(table_name)
+#     response = table.query(
+#         KeyConditionExpression=Key(key).eq(key_value),
+#         FilterExpression=Attr(attr).eq(attr_value)
+#     )
+#     return response['Items']
+
 
 
 # response = create_table("test_table2", key_schema, attribute_definitions)
@@ -133,23 +155,51 @@ if __name__ == "__main__":
 
     db_key_schema = [
         {"AttributeName": "phone_number", "KeyType": "HASH"},  # Partition key
-        {"AttributeName": "round", "KeyType": "RANGE"},  # Partition key
+        {"AttributeName": "round", "KeyType": "SORT"},  # Sort key
     ]
 
     db_attribute_definitions = [
         {"AttributeName": "phone_number", "AttributeType": "S"},
-        {"AttributeName": "round", "AttributeType": "S"},
+        {"AttributeName": "round", "AttributeType": "N"},
     ]
 
     table_name = "test_table"
-    table = create_table(table_name, db_key_schema, db_attribute_definitions)
-    print(table.name)
+    # table = create_table(table_name, db_key_schema, db_attribute_definitions)
+    # print(table.name)
     # response = dynamodb_client.describe_table(TableName=table_name)
     # pprint.pprint(response)
-    put_item(table_name, {"phone_number":"+18001234567","round":"1", "throw":"rock"})
-    put_item(table_name, {"phone_number":"+18001234567","round":"1", "throw":"paper"})
-    put_item(table_name, {"phone_number":"+18001234567","round":"2"})
-    response = put_item(table_name, {"phone_number":"+18001234567","round":"2", "throw":"scissors"})
-    print(response)
+    put_item(table_name, {"phone_number":"+18001234567","round":1, "throw":"rock"})
+    put_item(table_name, {"phone_number":"+18001234567","round":1, "throw":"paper"})
+    put_item(table_name, {"phone_number":"+18001234567","round":2, "throw":"rock"})
+    put_item(table_name, {"phone_number":"+18001234567","round":2, "throw":"scissors"})
 
-    delete_table(table_name)
+    item = get_item(table_name, {"phone_number":"+18001234567", "round":"1"})
+    if item:
+        print(item)
+    else:
+        print("no item")
+
+    result = key_eq_attr_filter_query(table_name, "phone_number", "+18001234567","round","1")
+    if result:
+        pprint.pprint(result)
+    else:
+        print("Query returned no results")
+
+    result = key_eq_query(table_name, "phone_number","+1802342s2211")
+    if result:
+        pprint.pprint(result)
+    else:
+        print("Query returned no results")
+
+
+    result = key_eq_query(table_name, "phone_number","+18001234567")
+    if result:
+        pprint.pprint(result)
+    else:
+        print("Query returned no results")
+
+    result = key_begins_with_query(table_name, "phone_number", "+")
+    if result:
+        pprint.pprint(result)
+    else:
+        print("Query returned no results")
