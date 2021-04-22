@@ -8,14 +8,14 @@ import logging
 
 logging.basicConfig(filename="rps.log", level=logging.INFO)
 
-dynamodb_client = boto3.client("dynamodb")
-dynamodb_resource = boto3.resource("dynamodb")
-# parameters for exponential backoff
+
 # parameters for exponential backoff
 RETRY_BACKOFF_MULTIPLIER = 2
 INITIAL_WAIT_SECONDS = 1
 MAX_WAIT_SECONDS = 9  # only wait < 9s for funciton creation before giving up.
 
+dynamodb_client = boto3.client("dynamodb")
+dynamodb_resource = boto3.resource("dynamodb")
 
 def create_table(
     table_name: str, key_schema: list, attribute_definitions: list
@@ -42,7 +42,7 @@ def create_table(
     else:
         # table_arn = response['TableDescription']['TableArn']
         logging.info("Dynamodb Table %s Created.", table_name)
-        return response
+        return table
 
 
 def get_table(table_name: str) -> dynamodb_resource.Table:
