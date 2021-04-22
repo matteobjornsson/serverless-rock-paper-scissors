@@ -11,35 +11,37 @@ TEARDOWN = True
 LOCKING = True
 
 # service names and parameters
-SNS_INCOMING_SMS_TOPIC_NAME = "rps_incoming_sms_test"
-LAMBDA_POLICY_NAME = "BasicLambdaExecutionRoleDynamoCRUD"
-LAMBDA_POLICY_FILE_NAME = "policy/lambda_policy.json"
-LAMBDA_ASSUME_ROLE_POLICY_FILE_NAME = "policy/lambda_assume_role_policy.json"
+SNS_INCOMING_SMS_TOPIC_NAME = "rps_incoming_sms"
+# Lambda filenames and parameters
 LAMBDA_FUNCTION_FILE_NAME = "lambda_function_handler.py"
 LAMBDA_HANDLER_NAME = "lambda_function_handler.lambda_handler"
-LAMBDA_ROLE_NAME = "rps-lambda-role_test"
-LAMBDA_FUNCTION_NAME = "rps-lambda-function_test"
-LAMBDA_FUNCTION_DESCRIPTION = "Rock Paper Scissors lambda function_test"
-# parameters for exponential backoff
-LOCK_RETRY_BACKOFF_MULTIPLIER = 2
-INITIAL_LOCK_WAIT_SECONDS = 0.05
-MAX_LOCK_WAIT_SECONDS = 3
-PINPOINT_APP_NAME = "rock_paper_scissors_test"
-# Table names and schemas
+LAMBDA_FUNCTION_NAME = "rps-lambda-function"
+LAMBDA_FUNCTION_DESCRIPTION = "Rock Paper Scissors lambda function"
+# IAm parameters associated with the lamba
+LAMBDA_ROLE_NAME = "rps-lambda-role"
+LAMBDA_ASSUME_ROLE_POLICY_FILE_NAME = "policy/lambda_assume_role_policy.json"
+LAMBDA_POLICY_NAME = "BasicLambdaExecutionRoleDynamoCRUD"
+LAMBDA_POLICY_FILE_NAME = "policy/lambda_policy.json"
+# Pinpoint app name
+PINPOINT_APP_NAME = "rock_paper_scissors"
+# Game state table parameters
 GAME_STATE_TABLE_NAME = "game_state"
 GAME_STATE_TABLE_SCHEMA = [{"AttributeName": "state", "KeyType": "HASH"}]
 GAME_STATE_TABLE_ATTR_DEFINITIONS = [{"AttributeName": "state", "AttributeType": "S"}]
-#
+# Lock Table parameters
 LOCK_TABLE_NAME = "lock_table"
 LOCK_TABLE_SCHEMA = [{"AttributeName": "lock_name", "KeyType": "HASH"}]
 LOCK_TABLE_ATTR_DEFINITIONS = [{"AttributeName": "lock_name", "AttributeType": "S"}]
+# Lock configuration for retrying and expiring
+LOCK_RETRY_BACKOFF_MULTIPLIER = 2
+INITIAL_LOCK_WAIT_SECONDS = 0.05
+MAX_LOCK_WAIT_SECONDS = 6
 LOCK_EXPIRATION_TIME_MS = 5000
 
 
-########
-# SNS  #
-########
-# create sns topic to handle incoming SMS messages from Pinpoint
+#######################################################################
+# Create Sns topic
+# SMS topic acts as intermediary SMS queue and trigger to the lambda function
 sns_in_topic = SNS.create_topic(SNS_INCOMING_SMS_TOPIC_NAME)
 # add a policy to allow Pinpoint to publish to this SNS topic
 pinpoint_policy_statement = {
@@ -52,15 +54,15 @@ pinpoint_policy_statement = {
 SNS.add_policy_statement(sns_in_topic, pinpoint_policy_statement)
 
 
-#############
-# PINPOINT  #
-#############
-# Create pinpoint app to handle incoming SMS
+#######################################################################
+# Create Pinpoint app
+# The Pinpoint app will handle all SMS traffic
 response = Pinpoint.create_pinpoint_app(PINPOINT_APP_NAME)
 pinpoint_app_id = response["ApplicationResponse"]["Id"]
-
 Pinpoint.enable_pinpoint_SMS(pinpoint_app_id)
 
+#######################################################################
+# Update Lambda Code
 # NOTE: The following code writes these parameters into the lambda handler file.
 # This tightly couples the files and makes it so the handler cannot run on its own.
 # this is a little hacky, feel free to improve upon it.
@@ -81,10 +83,9 @@ insert_lines_at_keyword(
     "insert new parameters after this line:",
 )
 
-###########
-# LAMBDA  #
-###########
-# create lambda function to handle Rock Paper Scissors logic when SMS are received
+#######################################################################
+# Create Lambda function
+# This function will handle Rock Paper Scissors logic when SMS are received
 with open(LAMBDA_POLICY_FILE_NAME) as file:
     lambda_policy_json = file.read()
 with open(LAMBDA_ASSUME_ROLE_POLICY_FILE_NAME) as file:
@@ -103,8 +104,7 @@ response = Lambda.create_lambda_function(
 )
 function_arn = response["FunctionArn"]
 
-
-# Give the sns topic permission to invoke the Lambda function
+# Add lambda permission to allow sns topic permission to invoke the Lambda function
 Lambda.add_permission(
     action="lambda:InvokeFunction",
     function_name=LAMBDA_FUNCTION_NAME,
@@ -113,6 +113,7 @@ Lambda.add_permission(
     statement_id="sns",
 )
 
+#######################################################################
 # add a lambda as a subscriber to the topic
 response = SNS.add_subscription(
     topic_arn=sns_in_topic.arn,
@@ -120,9 +121,9 @@ response = SNS.add_subscription(
     endpoint=function_arn,
 )
 
-#############
-# DYNAMODB  #
-#############
+#######################################################################
+# Create the DynamoDB tables
+# Used for game state and locks
 game_table = Dynamodb.create_table(
     table_name=GAME_STATE_TABLE_NAME,
     key_schema=GAME_STATE_TABLE_SCHEMA,
@@ -139,15 +140,15 @@ if LOCKING:
 print("Services are deployed. You can now text your pinpoint number 'test' to confirm.")
 
 if TEARDOWN:
-    input("Press enter to begin TEARDOWN.")
+    input("Press enter to begin service teardown.")
     SNS.delete_topic(sns_in_topic)
     IAm.delete_role(iam_role)
     IAm.delete_policy(iam_policy)
     Lambda.delete_lambda_function(LAMBDA_FUNCTION_NAME)
-    Dynamodb.delete_table(game_table.table_name)
-    Pinpoint.delete_pinpoint_app(pinpoint_app_id)
     delete_lines(os.path.abspath(LAMBDA_FUNCTION_FILE_NAME), lines_to_inject)
+    Pinpoint.delete_pinpoint_app(pinpoint_app_id)
+    Dynamodb.delete_table(game_table.table_name)
     if LOCKING:
         Dynamodb.delete_table(lock_table.table_name)
 
-    print("Service TEARDOWN complete.")
+    print("Service teardown complete.")
