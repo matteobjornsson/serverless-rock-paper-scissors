@@ -62,7 +62,6 @@ response = Pinpoint.create_pinpoint_app(PINPOINT_APP_NAME)
 pinpoint_app_id = response["ApplicationResponse"]["Id"]
 
 Pinpoint.enable_pinpoint_SMS(pinpoint_app_id)
-print("pinpoint appID", pinpoint_app_id)
 
 # NOTE: The following code writes these parameters into the lambda handler file.
 # This tightly couples the files and makes it so the handler cannot run on its own.
