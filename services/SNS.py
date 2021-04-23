@@ -9,8 +9,8 @@ import logging
 
 logging.basicConfig(filename="rps.log", level=logging.INFO)
 
-sns_resource = boto3.resource("sns_resource")
-sns_resource_client = boto3.client("sns_resource")
+sns_resource = boto3.resource("sns")
+sns_resource_client = boto3.client("sns")
 
 
 def create_topic(topic_name: str) -> sns_resource.Topic:
