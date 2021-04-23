@@ -11,7 +11,8 @@ from boto3.dynamodb.conditions import Attr
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 
-
+# the following line tells the setup script where to insert relevant parameters
+# such as the new pinpoint app id and all errored references below. 
 # insert new parameters after this line:
 
 # insert new parameters before this line.
@@ -69,13 +70,20 @@ class FailedToReleaseLock(Exception):
 
 
 def process_throw_with_locking(current_throw, current_number):
+    """
+    Given a throw and a number it belongs to (both strings), 
+    determine the winner or store throw. 
+    """
     self_id = str(uuid.uuid4())
-    lock_acquired = exponential_change_lock_retry(acquire_lock, "throw_lock", self_id)
+    # acquire lock to prevent other lambda functions from messing with the game
+    # state while processing throw. Keep trying for exponential retry time.
+    lock_acquired = exponential_retry_acquire_lock("throw_lock", self_id)
     if lock_acquired:
 
         opponent = get_item({"state": "opponent"})
-
+        # if get_item returns an opponent, it means there was one stored.
         if opponent:
+            # determine the winner and text players
             winner_message = determine_winner(
                 [opponent["throw"], opponent["phone_number"]],
                 [current_throw, current_number],
@@ -85,9 +93,12 @@ def process_throw_with_locking(current_throw, current_number):
                 opponent["phone_number"], "ROCK PAPER SCISSORS:\n" + winner_message
             )
             send_sms(current_number, "ROCK PAPER SCISSORS:\n" + winner_message)
+            # delete the game state for next round. 
             delete_item({"state": "opponent"})
             logger.info("Game completed.")
+        # otherwise get_item returned None, indicating no previous game state stored. 
         else:
+            # therefore store the new game state. 
             put_item(
                 {
                     "state": "opponent",
@@ -95,22 +106,23 @@ def process_throw_with_locking(current_throw, current_number):
                     "phone_number": current_number,
                 }
             )
+            # notify the player the game is waiting for another throw
             send_sms(current_number, "ROCK PAPER SCISSORS:\nWaiting for opponent...")
-
-        lock_released = exponential_change_lock_retry(
-            release_lock, "throw_lock", self_id
-        )
+        # release the lock. 
+        lock_released = release_lock("throw_lock", self_id)
         if lock_released:
             pass
         else:
             logger.error("Failed to release lock %s", self_id)
             raise FailedToReleaseLock
     else:
+        # under normal circumstances acquire lock is very unlikely to fail.
         logger.exception("Failed to acquire lock %s", self_id)
         raise FailedToAcquireLock
 
 
 def process_throw_without_locking(current_throw, current_number):
+    # same as above but without locking. 
     opponent = get_item({"state": "opponent"})
 
     if opponent:
@@ -166,6 +178,7 @@ def determine_winner(first_throw, second_throw):
 ### DB methods #####################################################
 def put_item(item: dict) -> None:
     # item must at least have keys that match table primary keys
+    # see Dynamodb.py file for more info
     try:
         table.put_item(Item=item)
     except ClientError as e:
@@ -176,6 +189,7 @@ def put_item(item: dict) -> None:
 
 def get_item(keys: dict) -> dict:
     # keys must have only the dict keys that match table primary keys
+    # see Dynamodb.py file for more info
     try:
         response = table.get_item(Key=keys)
     except ClientError as e:
@@ -190,7 +204,8 @@ def get_item(keys: dict) -> dict:
 
 
 def delete_item(keys: dict) -> None:
-    # keys must have only the dict keys that match table primary keys
+    # keys must have only the dict keys that match table primary key    
+    # see Dynamodb.py file for more info
     try:
         table.delete_item(Key=keys)
     except ClientError as e:
@@ -201,6 +216,7 @@ def delete_item(keys: dict) -> None:
 
 ### Pinpoint methods #####################################################
 def send_sms(phone_number: str, message: str) -> None:
+    # send an SMS to the given number. See Pinpoint.py file for more details.
     try:
         response = pinpoint_client.send_messages(
             ApplicationId=PINPOINT_APP_ID,
@@ -225,11 +241,19 @@ def send_sms(phone_number: str, message: str) -> None:
 
 ### Lock methods #####################################################
 def ms_timestamp() -> int:
+    """
+    Method that returns time since epoch in milliseconds. Allows for easy math
+    determining passage of time at the millisecond level.
+    """
     utc_epoch_time = datetime.datetime.utcnow() - datetime.datetime(1970, 1, 1)
     return int(utc_epoch_time.total_seconds() * 1000)
 
 
 def get_lock_table(table_name: str):
+    """
+    Get the table used for acquiring and releasing named locks.
+    This function assumes the existence of the table. 
+    """
     try:
         table = boto3.resource("dynamodb").Table(table_name)
     except ClientError as e:
@@ -240,14 +264,22 @@ def get_lock_table(table_name: str):
 
 
 def acquire_lock(lock_name: str, self_id: str) -> bool:
+    """
+    Acquire named lock from the lock table, identify self with id string.
+
+    requesters are uniquely identified by a UUID given to each function invocation.
+    """
     table = get_lock_table(LOCK_TABLE_NAME)
     try:
+        # Conditional expression is used to ensure locks are acquired atomically.
         table.put_item(
             Item={
                 "lock_name": lock_name,
                 "holder": self_id,
                 "time_acquired": ms_timestamp(),  # number type
             },
+            # requester only gets the lock if it does not exist (exists if held by another function)
+            # or if the lock has expired.
             ConditionExpression=Attr("lock_name").not_exists()
             | Attr("time_acquired").lt(ms_timestamp() - LOCK_EXPIRATION_TIME_MS),
         )
@@ -263,6 +295,13 @@ def acquire_lock(lock_name: str, self_id: str) -> bool:
 
 
 def release_lock(lock_name: str, self_id: str) -> bool:
+    """
+    Release the named lock.
+
+    Locks should only be releasable if acquired. UUID function ids are used to 
+    uniquely differentiate holders. One cannot release a lock not held without
+    guessing a UUID correctly.
+    """
     try:
         table = get_lock_table(LOCK_TABLE_NAME)
         table.delete_item(
@@ -278,19 +317,19 @@ def release_lock(lock_name: str, self_id: str) -> bool:
         return True
 
 
-def exponential_change_lock_retry(func, *func_args):
+def exponential_retry_acquire_lock(lock_name: str, self_id: str):
     """
-    Retries acquire_lock or release_lock until lock changed or maximum desired time elapsed.
+    Retries acquire_lock until lock acquired or maximum desired time elapsed.
     """
     delay = INITIAL_LOCK_WAIT_SECONDS
-    lock_changed = False
-    while delay < MAX_LOCK_WAIT_SECONDS and not lock_changed:
-        lock_changed = func(*func_args)
-        if not lock_changed:
-            logger.info(f"Waiting for {delay} to retry {func.__name__}.")
+    lock_acquired = False
+    while delay < MAX_LOCK_WAIT_SECONDS and not lock_acquired:
+        lock_acquired = acquire_lock(lock_name, self_id)
+        if not lock_acquired:
+            logger.info(f"Waiting for {delay} to retry lock acquire.")
             time.sleep(delay)
             delay = delay * LOCK_RETRY_BACKOFF_MULTIPLIER
-    return lock_changed
+    return lock_acquired
 
 
 if __name__ == "__main__":
