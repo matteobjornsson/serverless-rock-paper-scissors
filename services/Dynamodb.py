@@ -23,7 +23,12 @@ def create_table(
     table_name: str, key_schema: list, attribute_definitions: list
 ) -> dynamodb_resource.Table:
     """
-    TODO: write function description
+    Create a dynamoDB table named 'table_name.'
+    Tables must have unique names within regions.
+    param @key_schema and @attribute_definitions define the primary key and
+    must follow the restrictions outlined here:
+    https://docs.amazonaws.cn/en_us/amazondynamodb/latest/developerguide/HowItWorks.CoreComponents.html#HowItWorks.CoreComponents.PrimaryKey
+    :return: Returns a boto3 dynamodb resource Table object
     """
     try:
         table = dynamodb_resource.create_table(
@@ -50,7 +55,7 @@ def create_table(
 
 def get_table(table_name: str) -> dynamodb_resource.Table:
     """
-    TODO: write function description
+    Get a table by name and return a Table object
     """
     try:
         table = dynamodb_client.describe_table(TableName=table_name)
@@ -59,36 +64,41 @@ def get_table(table_name: str) -> dynamodb_resource.Table:
         logging.exception("Couldn't get table %s.", table_name)
         raise
     else:
-        # rearrange response to match create_table() return
         return table
 
 
 def delete_table(table_name: str) -> dict:
     """
-    TODO: write function description
+    Delete a table by name.
+    Deletes must wait if the resource is in use, either because recently created
+    or because another process is accessing it. Therefore delete is retried
+    on an exponential backoff basis.
     """
     delay = INITIAL_WAIT_SECONDS
     while delay < MAX_WAIT_SECONDS:
         try:
             response = dynamodb_client.delete_table(TableName=table_name)
         except ClientError as error:
-            if (
-                error.response["Error"]["Code"] == "ResourceInUseException"
-                and delay < MAX_WAIT_SECONDS
-            ):
-                logging.error("Cannot delete yet table in use ...")
+            if error.response["Error"]["Code"] == "ResourceInUseException":
+                logging.error("Cannot delete yet, table in use ...")
                 time.sleep(delay)
+                # exponential backoff, increase retry time
                 delay = delay * RETRY_BACKOFF_MULTIPLIER
             else:
-                logging.error(error.response["Error"]["Code"])
-                logging.error("Could not delete dynamodb table %s.", table_name)
+                next_delay = delay * RETRY_BACKOFF_MULTIPLIER
+                if next_delay > MAX_WAIT_SECONDS:
+                    # if the max wait time was exceeded, give up and log error
+                    logging.error(error.response["Error"]["Code"])
+                    logging.error("Could not delete dynamodb table %s.", table_name)
         else:
-            # table_arn = response['TableDescription']['TableArn']
             logging.info("Dynamodb Table %s deleted.", table_name)
             return response
 
 
 def table_exists(table_name: str) -> bool:
+    """
+    Check if a table exists by name.
+    """
     try:
         dynamodb_client.describe_table(TableName=table_name)
         return True
@@ -99,8 +109,12 @@ def table_exists(table_name: str) -> bool:
             raise
 
 
-def put_item(table_name: str, item: dict):
-    # item must at least have keys that match table primary keys
+def put_item(table_name: str, item: dict) -> dict:
+    """
+    Put an item into a table of the given name.
+    Item is a dict that must at minimum contain the primary key (one or two
+    parameters) but can contain arbitrary additional entries to store
+    """
     try:
         table = dynamodb_resource.Table(table_name)
         response = table.put_item(Item=item)
@@ -112,7 +126,11 @@ def put_item(table_name: str, item: dict):
 
 
 def get_item(table_name: str, keys: dict) -> dict:
-    # keys must have only the dict keys that match table primary keys
+    """
+    Item is a dict that must contain only the primary key (all items are
+    uniquely defined by their primary key).
+    :return: Returns the item in dictionary form, or None if no such item exists
+    """
     try:
         table = dynamodb_resource.Table(table_name)
         response = table.get_item(Key=keys)
@@ -127,33 +145,8 @@ def get_item(table_name: str, keys: dict) -> dict:
             return None
 
 
-# def key_eq_query(table_name: str, key: str, value: str) -> dict:
-#     table = dynamodb_resource.Table(table_name)
-#     response = table.query(
-#         KeyConditionExpression=Key(key).eq(value)
-#     )
-#     return response['Items']
-
-# def key_begins_with_query(table_name: str, key: str, value: str) -> dict:
-#     table = dynamodb_resource.Table(table_name)
-#     response = table.query(
-#         KeyConditionExpression=Key(key).begins_with(value)
-#     )
-#     return response['Items']
-
-# def key_eq_attr_filter_query(table_name: str, key:str, key_value: str, attr: str, attr_value: str) -> dict:
-#     table = dynamodb_resource.Table(table_name)
-#     response = table.query(
-#         KeyConditionExpression=Key(key).eq(key_value),
-#         FilterExpression=Attr(attr).eq(attr_value)
-#     )
-#     return response['Items']
-
-
-# response = create_table("test_table2", key_schema, attribute_definitions)
-# # table_arn = response['TableDescription']['TableArn']
 if __name__ == "__main__":
-
+    # the following code tests the functionality of this file.
     db_key_schema = [
         {"AttributeName": "phone_number", "KeyType": "HASH"},  # Partition key
         {"AttributeName": "round", "KeyType": "SORT"},  # Sort key
@@ -165,19 +158,18 @@ if __name__ == "__main__":
     ]
 
     table_name = "test_table"
-    # table = create_table(table_name, db_key_schema, db_attribute_definitions)
-    # print(table.name)
-    # response = dynamodb_client.describe_table(TableName=table_name)
-    # pprint.pprint(response)
-    put_item(table_name, {"phone_number": "+18001234567", "round": 1, "throw": "rock"})
+    table = create_table(table_name, db_key_schema, db_attribute_definitions)
+    response = dynamodb_client.describe_table(TableName=table_name)
+    pprint.pprint(response)
+    put_item(table_name, {"phone_number": "+18001234467", "round": 1, "throw": "rock"})
     put_item(table_name, {"phone_number": "+18001234567", "round": 1, "throw": "paper"})
-    put_item(table_name, {"phone_number": "+18001234567", "round": 2, "throw": "rock"})
+    put_item(table_name, {"phone_number": "+18001234467", "round": 2, "throw": "rock"})
     response = put_item(
         table_name, {"phone_number": "+18001234567", "round": 2, "throw": "scissors"}
     )
     pprint.pprint(response)
     item = get_item(table_name, {"phone_number": "+18001234567", "round": "1"})
     if item:
-        print(item)
+        print("Item retrieved: ", item)
     else:
         print("no item")
