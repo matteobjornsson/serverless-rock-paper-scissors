@@ -25,7 +25,7 @@ def create_lambda_function(
     function_name: str, description: str, handler_name: str, iam_role, code_bytes: bytes
 ) -> dict:
     """
-    Create a lambda function.
+    Create a lambda function and publish it.
     :param function_name: function name
     :param description: function description
     :param handler_name: name of the event handler in the lambda function code
@@ -73,17 +73,12 @@ def create_lambda_function(
             return response
 
 
-def delete_lambda_function(function_name: str, version=None) -> dict:
+def delete_lambda_function(function_name: str) -> dict:
     """
-    TODO: write function description
+    Delete a lambda function by name
     """
     try:
-        if version:
-            response = lambda_client.delete_function(
-                FunctionName=function_name, Qualifier=version
-            )
-        else:
-            response = lambda_client.delete_function(FunctionName=function_name)
+        response = lambda_client.delete_function(FunctionName=function_name)
     except ClientError as error:
         logging.error(error.response["Error"]["Message"])
         logging.error("Couldn't delete function %s.", function_name)
