@@ -12,7 +12,7 @@ logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 
 # the following line tells the setup script where to insert relevant parameters
-# such as the new pinpoint app id and all errored references below. 
+# such as the new pinpoint app id and all errored references below.
 # insert new parameters after this line:
 
 # insert new parameters before this line.
@@ -71,8 +71,8 @@ class FailedToReleaseLock(Exception):
 
 def process_throw_with_locking(current_throw, current_number):
     """
-    Given a throw and a number it belongs to (both strings), 
-    determine the winner or store throw. 
+    Given a throw and a number it belongs to (both strings),
+    determine the winner or store throw.
     """
     self_id = str(uuid.uuid4())
     # acquire lock to prevent other lambda functions from messing with the game
@@ -93,12 +93,12 @@ def process_throw_with_locking(current_throw, current_number):
                 opponent["phone_number"], "ROCK PAPER SCISSORS:\n" + winner_message
             )
             send_sms(current_number, "ROCK PAPER SCISSORS:\n" + winner_message)
-            # delete the game state for next round. 
+            # delete the game state for next round.
             delete_item({"state": "opponent"})
             logger.info("Game completed.")
-        # otherwise get_item returned None, indicating no previous game state stored. 
+        # otherwise get_item returned None, indicating no previous game state stored.
         else:
-            # therefore store the new game state. 
+            # therefore store the new game state.
             put_item(
                 {
                     "state": "opponent",
@@ -108,7 +108,7 @@ def process_throw_with_locking(current_throw, current_number):
             )
             # notify the player the game is waiting for another throw
             send_sms(current_number, "ROCK PAPER SCISSORS:\nWaiting for opponent...")
-        # release the lock. 
+        # release the lock.
         lock_released = release_lock("throw_lock", self_id)
         if lock_released:
             pass
@@ -122,7 +122,7 @@ def process_throw_with_locking(current_throw, current_number):
 
 
 def process_throw_without_locking(current_throw, current_number):
-    # same as above but without locking. 
+    # same as above but without locking.
     opponent = get_item({"state": "opponent"})
 
     if opponent:
@@ -204,7 +204,7 @@ def get_item(keys: dict) -> dict:
 
 
 def delete_item(keys: dict) -> None:
-    # keys must have only the dict keys that match table primary key    
+    # keys must have only the dict keys that match table primary key
     # see Dynamodb.py file for more info
     try:
         table.delete_item(Key=keys)
@@ -252,7 +252,7 @@ def ms_timestamp() -> int:
 def get_lock_table(table_name: str):
     """
     Get the table used for acquiring and releasing named locks.
-    This function assumes the existence of the table. 
+    This function assumes the existence of the table.
     """
     try:
         table = boto3.resource("dynamodb").Table(table_name)
@@ -298,7 +298,7 @@ def release_lock(lock_name: str, self_id: str) -> bool:
     """
     Release the named lock.
 
-    Locks should only be releasable if acquired. UUID function ids are used to 
+    Locks should only be releasable if acquired. UUID function ids are used to
     uniquely differentiate holders. One cannot release a lock not held without
     guessing a UUID correctly.
     """

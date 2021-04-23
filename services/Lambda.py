@@ -92,9 +92,9 @@ def update_lambda_code(
 ) -> dict:
     """
     Use this function to update an existing lambda's code.
-    You can change the publish flag to false to prevent deploy. 
-    You can set the dryrun to True to inspect the response and confirm it would have worked. 
-    :param code_bytes: bytes of zipped new code to publish. 
+    You can change the publish flag to false to prevent deploy.
+    You can set the dryrun to True to inspect the response and confirm it would have worked.
+    :param code_bytes: bytes of zipped new code to publish.
     """
     delay = INITIAL_WAIT_SECONDS
     # add in exponential backoff waiting for AWS services (iam_role) to deploy and connect
@@ -128,6 +128,7 @@ def update_lambda_code(
             )
             return response
 
+
 def add_permission(
     action: str, function_name: str, principal: str, source_arn: str, statement_id: str
 ) -> dict:
@@ -139,7 +140,7 @@ def add_permission(
     :param function_name: function name
     :param principal: string defining the entity type the action pertains to
     :param source_arn: the arn of the source entity you are giving this permission to
-    :param statement_id: a unique id, either descriptive, or uuid style. 
+    :param statement_id: a unique id, either descriptive, or uuid style.
 
     example, this gives an sns topic permission to trigger the lambda
     Lambda.add_permission(
@@ -170,7 +171,7 @@ def get_function(function_name: str) -> dict:
     """
     Get a function by name.
 
-    return a response dictionary matching create_function() for interchangeability. 
+    return a response dictionary matching create_function() for interchangeability.
     """
     try:
         response = lambda_client.get_function(FunctionName=function_name)

@@ -80,11 +80,11 @@ def add_subscription(
     Subscribe another resource to the topic.
 
     :param topic_arn: topic to which you want to add a subscriber
-    :param protocol: how do you want to message subscriber? email, sms, etc. 
+    :param protocol: how do you want to message subscriber? email, sms, etc.
     Must match expected protocol strings
-    :param endpoint: phone number if SMS, email if email, etc. 
+    :param endpoint: phone number if SMS, email if email, etc.
     Must match expected endpoint strings
-    :param attributes: key value pairs, use for tags. 
+    :param attributes: key value pairs, use for tags.
     :param return_subscription_arn: if you want the subscription arn back. boolean.
 
     see documentation here for details
@@ -108,16 +108,14 @@ def add_subscription(
 
 
 if __name__ == "__main__":
-    topic = create_topic('rps_test')
+    topic = create_topic("rps_test")
     pinpoint_policy_statement = {
-            "Sid": "PinpointPublish",
-            "Effect": "Allow",
-            "Principal": {
-                "Service": "mobile.amazonaws.com"
-            },
-            "Action": "sns:Publish",
-            "Resource": topic.arn
-            }
+        "Sid": "PinpointPublish",
+        "Effect": "Allow",
+        "Principal": {"Service": "mobile.amazonaws.com"},
+        "Action": "sns:Publish",
+        "Resource": topic.arn,
+    }
     add_policy_statement(topic, pinpoint_policy_statement)
     response = add_subscription(
         topic_arn="arn:aws:sns:us-east-1:802108040626:rps_incoming_sms",

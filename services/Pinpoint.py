@@ -13,8 +13,8 @@ pinpoint_client = boto3.client("pinpoint")
 
 def create_pinpoint_app(app_name: str) -> dict:
     """
-    Create a pinpoint app with the given name. 
-    (pinpoint apps are uniquely defined by ID, not name. 
+    Create a pinpoint app with the given name.
+    (pinpoint apps are uniquely defined by ID, not name.
     One might create many of the same name)
     """
     try:
