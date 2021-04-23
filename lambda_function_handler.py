@@ -77,7 +77,7 @@ def process_throw_with_locking(current_throw, current_number):
     self_id = str(uuid.uuid4())
     # acquire lock to prevent other lambda functions from messing with the game
     # state while processing throw. Keep trying for exponential retry time.
-    lock_acquired = exponential_retry_acquire_lock("throw_lock", self_id)
+    lock_acquired = retry_acquire_lock("throw_lock", self_id)
     if lock_acquired:
 
         opponent = get_item({"state": "opponent"})
@@ -316,10 +316,23 @@ def release_lock(lock_name: str, self_id: str) -> bool:
         logger.info("Lock released %s", self_id)
         return True
 
+def retry_acquire_lock(lock_name: str, self_id: str):
+    """
+    Retries acquire_lock until lock acquired or maximum desired time elapsed.
+    Sufficient for low wait times and low contention.
+    """
+    lock_acquired = False
+    start = time.time()
+    while (time.time() - start < MAX_LOCK_WAIT_SECONDS) and not lock_acquired:
+        lock_acquired = acquire_lock(lock_name, self_id)
+        if not lock_acquired:
+            logger.info(f"Retrying acquire lock {self_id}")
+    return lock_acquired
 
 def exponential_retry_acquire_lock(lock_name: str, self_id: str):
     """
-    Retries acquire_lock until lock acquired or maximum desired time elapsed.
+    Retries acquire_lock using exponential backoff until lock acquired 
+    or maximum desired time elapsed. better to use if you expect long retry times.
     """
     delay = INITIAL_LOCK_WAIT_SECONDS
     lock_acquired = False
@@ -331,13 +344,20 @@ def exponential_retry_acquire_lock(lock_name: str, self_id: str):
             delay = delay * LOCK_RETRY_BACKOFF_MULTIPLIER
     return lock_acquired
 
+def random_retry_acquire_lock(lock_name: str, self_id: str):
+    """
+    Retries acquire_lock using random intervals for retry. Useful for high
+    lock contention. 
+    """
+    # not implemented
+    pass
 
 if __name__ == "__main__":
     # this 'unit' test needs to be run after setup.py constructs the file,
     # or you'd need to add some parameters in temporarily.
     from threading import Thread
 
-    with open("test/lambda_test_event.json") as file:
+    with open("test_events/lambda_test_event.json") as file:
         event_json = file.read()
     # Start two threads at the same time to demo locking
     event = json.loads(event_json)
