@@ -300,7 +300,7 @@ if __name__ == "__main__":
 
     with open("test/lambda_test_event.json") as file:
         event_json = file.read()
-    # Start two threads at the same time to demo locking 
+    # Start two threads at the same time to demo locking
     event = json.loads(event_json)
     t1 = Thread(
         target=lambda_handler,
