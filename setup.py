@@ -108,7 +108,7 @@ response = Lambda.create_lambda_function(
 )
 function_arn = response["FunctionArn"]
 
-# Add lambda permission to allow sns topic permission to invoke the Lambda function
+# Add lambda permission to allow sns topic to invoke the Lambda function
 Lambda.add_permission(
     action="lambda:InvokeFunction",
     function_name=LAMBDA_FUNCTION_NAME,
