@@ -84,17 +84,23 @@ def delete_table(table_name: str) -> dict:
             response = dynamodb_client.delete_table(TableName=table_name)
         except ClientError as error:
             if error.response["Error"]["Code"] == "ResourceInUseException":
-                logging.error("Cannot delete yet, table in use ...")
-                time.sleep(delay)
-                # exponential backoff, increase retry time
-                delay = delay * RETRY_BACKOFF_MULTIPLIER
-            else:
                 next_delay = delay * RETRY_BACKOFF_MULTIPLIER
-                if next_delay > MAX_WAIT_SECONDS:
-                    # if the max wait time was exceeded, give up and log error
-                    logging.error(error.response["Error"]["Code"])
-                    logging.error("Could not delete dynamodb table %s.", table_name)
+                if next_delay < MAX_WAIT_SECONDS:
+                    # then we will try again next time
+                    logging.error("Cannot delete yet, table in use ...")
+                    time.sleep(delay)
+                    # exponential backoff, increase retry time
+                    delay = delay * RETRY_BACKOFF_MULTIPLIER
+                else:
+                    # otherwise, max wait time has been exceeded
+                    logging.error("Exceeded max retry time, giving up table delete.")
+
+            else:
+                # some other error was raised, will not retry
+                logging.error(error.response["Error"]["Code"])
+                logging.error("Could not delete dynamodb table %s.", table_name)
         else:
+            # delete was successful, exit loop with return statement
             logging.info("Dynamodb Table %s deleted.", table_name)
             return response
 

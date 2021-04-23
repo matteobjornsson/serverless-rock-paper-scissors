@@ -6,7 +6,6 @@
 # https://docs.aws.amazon.com/code-samples/latest/catalog/python-lambda-boto_client_examples-lambda_basics.py.html
 
 import time
-
 from util import return_zipped_bytes
 from services import IAm
 import boto3
@@ -19,14 +18,20 @@ lambda_client = boto3.client("lambda")
 # parameters for exponential backoff
 RETRY_BACKOFF_MULTIPLIER = 1.5
 INITIAL_WAIT_SECONDS = 1
-MAX_WAIT_SECONDS = 18  # only wait < 9s for funciton creation before giving up.
+MAX_WAIT_SECONDS = 18
 
 
 def create_lambda_function(
     function_name: str, description: str, handler_name: str, iam_role, code_bytes: bytes
 ) -> dict:
     """
-    TODO: write function description
+    Create a lambda function.
+    :param function_name: function name
+    :param description: function description
+    :param handler_name: name of the event handler in the lambda function code
+    :param iam_role: IAM role object, lambda functions need to be associated to
+    a role to define access permissions
+    :param code_bytes: bytes of the zipped function code to upload to Lambda
     """
     delay = INITIAL_WAIT_SECONDS
     # add in exponential backoff waiting for AWS services (iam_role) to deploy and connect
@@ -45,14 +50,23 @@ def create_lambda_function(
             if "Function already exist" in e.response["Error"]["Message"]:
                 logging.warning("The function %s already exists.", function_name)
                 return get_function(function_name)
-            elif delay < MAX_WAIT_SECONDS:
-                print("Waiting for resources to connect...")
-                time.sleep(delay)
-                delay = delay * RETRY_BACKOFF_MULTIPLIER
             else:
-                logging.error(e.response["Error"]["Code"])
-                logging.error("Couldn't create function %s.", function_name)
-                raise
+                # check if this is the last try before giving up
+                next_delay = delay * RETRY_BACKOFF_MULTIPLIER
+                if next_delay < MAX_WAIT_SECONDS:
+                    # then we will try again next time
+                    print("Waiting for resources to connect...")
+                    time.sleep(delay)
+                    # exponential backoff, increase retry time
+                    delay = delay * RETRY_BACKOFF_MULTIPLIER
+                else:
+                    # otherwise, max wait time has been exceeded, give up
+                    logging.error(e.response["Error"]["Code"])
+                    logging.error(
+                        "Couldn't create function %s, max retry time exceeded.",
+                        function_name,
+                    )
+                    raise
         else:
             logging.info(
                 "Created function '%s' with ARN: '%s'.",
