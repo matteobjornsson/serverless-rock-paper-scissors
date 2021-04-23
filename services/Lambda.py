@@ -91,7 +91,10 @@ def update_lambda_code(
     function_name: str, code_bytes: bytes, publish=True, dryrun=False
 ) -> dict:
     """
-    TODO: write function description
+    Use this function to update an existing lambda's code.
+    You can change the publish flag to false to prevent deploy. 
+    You can set the dryrun to True to inspect the response and confirm it would have worked. 
+    :param code_bytes: bytes of zipped new code to publish. 
     """
     delay = INITIAL_WAIT_SECONDS
     # add in exponential backoff waiting for AWS services (iam_role) to deploy and connect
@@ -129,7 +132,23 @@ def add_permission(
     action: str, function_name: str, principal: str, source_arn: str, statement_id: str
 ) -> dict:
     """
-    TODO: write function description
+    Add an IAM policy statement to the lambda.
+
+    :param action: a string matching one of the many allowed AWS policy actions
+    see docs here: https://docs.aws.amazon.com/IAM/latest/UserGuide/reference_policies_elements_action.html
+    :param function_name: function name
+    :param principal: string defining the entity type the action pertains to
+    :param source_arn: the arn of the source entity you are giving this permission to
+    :param statement_id: a unique id, either descriptive, or uuid style. 
+
+    example, this gives an sns topic permission to trigger the lambda
+    Lambda.add_permission(
+        action="lambda:InvokeFunction",
+        function_name=LAMBDA_FUNCTION_NAME,
+        principal="sns.amazonaws.com",
+        source_arn=sns_in_topic.arn,
+        statement_id="sns",
+    )
     """
     try:
         response = lambda_client.add_permission(
@@ -142,7 +161,6 @@ def add_permission(
     except ClientError as e:
         logging.error(e.response["Error"]["Message"])
         logging.error("Couldn't add permission to policy")
-
     else:
         logging.info("Policy Permission Added.")
         return response
@@ -150,7 +168,9 @@ def add_permission(
 
 def get_function(function_name: str) -> dict:
     """
-    TODO: write function description
+    Get a function by name.
+
+    return a response dictionary matching create_function() for interchangeability. 
     """
     try:
         response = lambda_client.get_function(FunctionName=function_name)
@@ -162,7 +182,7 @@ def get_function(function_name: str) -> dict:
         return response["Configuration"]
 
 
-# "unit" test
+# "unit" test exercising the functionality in the file
 if __name__ == "__main__":
 
     lambda_policy_name = "BasicLambdaExecutionRoleDynamoCRUD"
