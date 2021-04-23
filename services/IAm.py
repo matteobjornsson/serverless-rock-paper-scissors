@@ -1,3 +1,7 @@
+#
+# Created on Thu Apr 22 2021
+# Matteo Bjornsson
+#
 import boto3
 from botocore.exceptions import ClientError
 import logging

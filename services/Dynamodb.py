@@ -1,3 +1,7 @@
+#
+# Created on Thu Apr 22 2021
+# Matteo Bjornsson
+#
 import pprint
 import time
 import boto3

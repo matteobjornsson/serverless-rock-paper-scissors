@@ -1,3 +1,7 @@
+#
+# Created on Thu Apr 22 2021
+# Matteo Bjornsson
+#
 # file contents adapted from AWS example
 # https://docs.aws.amazon.com/code-samples/latest/catalog/python-lambda-boto_client_examples-lambda_basics.py.html
 

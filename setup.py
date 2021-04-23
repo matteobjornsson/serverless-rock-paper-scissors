@@ -1,3 +1,7 @@
+#
+# Created on Thu Apr 22 2021
+# Matteo Bjornsson
+#
 from services import IAm, Lambda, Pinpoint, SNS, Dynamodb
 from util import *
 import os
