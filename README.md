@@ -62,7 +62,7 @@ To deploy the game you will need to run the setup file.
 ```
 python setup.py
 ```
-This will automatically deploy all of the services and their required permission configurations, besides requesting a phone number. 
+This will automatically deploy all of the services and their required permission configurations, besides requesting a phone number. The script will pause once deployed and wait for input. Pressing enter will tear down the deployed services. Edit the `TEARDOWN` boolean in `setup.py` to keep services alive. 
 ## 2. Request A Phone Number
 This game is played via SMS, so you'll need an AWS phone number to send text messages to. 
 
@@ -90,4 +90,24 @@ Once you have a phone number you must turn on Two-way SMS. This setting can be a
 
 # Usage
 
-Send a text `test` to your new phone number. 
+Send a text `test` to your new phone number while the `setup.py` script is running (paused before teardown). 
+
+Gameplay is simple: text `rock`, `paper`, or `scissors` to your new pinpoint phone number and get a friend to do the same to find out who won. 
+
+You can also text the number twice to find out which one of your selves won. 
+
+# Implementation Details
+
+## Mutex Locking
+
+Lambda functions are invoked on a per-SMS basis and operate asynchronously. When an SMS is received, the invoked lambda function will check a DynamoDB table for an existing game throw from another player. The lambda code contains a rudimentary lock implementation to provide mutual exclusion to the game state table. A DynamoDB table stores named locks and uses conditional expressions to atomically acquire locks. 
+
+The locks have an expiration time parameter to prevent deadlocking from process failure while holding the lock. Lambda functions must acquire a lock before editing or reading the game state table. They cannot acquire the lock while another function is accessing the table, and must wait for its release. 
+
+From a practical standpoint, this locking scheme is sufficient for the given purpose given that the processes are short lived and require a lock on a single resource. 
+
+Locking methods are all implemented in the lambda handler file to simplify importing of libraries or additional files. 
+
+Locking implementation adapted from 
+https://blog.revolve.team/2020/09/08/implement-mutex-with-dynamodb/
+and https://github.com/chiradeep/dyndb-mutex
