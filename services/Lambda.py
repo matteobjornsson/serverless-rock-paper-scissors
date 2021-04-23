@@ -51,16 +51,13 @@ def create_lambda_function(
                 logging.warning("The function %s already exists.", function_name)
                 return get_function(function_name)
             else:
-                # check if this is the last try before giving up
-                next_delay = delay * RETRY_BACKOFF_MULTIPLIER
-                if next_delay < MAX_WAIT_SECONDS:
-                    # then we will try again next time
-                    print("Waiting for resources to connect...")
-                    time.sleep(delay)
-                    # exponential backoff, increase retry time
-                    delay = delay * RETRY_BACKOFF_MULTIPLIER
-                else:
-                    # otherwise, max wait time has been exceeded, give up
+                print("Waiting for resources to connect...")
+                time.sleep(delay)
+                # exponential backoff, increase retry time
+                delay = delay * RETRY_BACKOFF_MULTIPLIER
+                # check if this is the last retry
+                if delay >= MAX_WAIT_SECONDS:
+                    # if so, max wait time has been exceeded, give up
                     logging.error(e.response["Error"]["Code"])
                     logging.error(
                         "Couldn't create function %s, max retry time exceeded.",
@@ -114,11 +111,16 @@ def update_lambda_code(
         except ClientError as e:
             print("Waiting for resources to connect...")
             time.sleep(delay)
+            # exponential backoff, increase retry time
             delay = delay * RETRY_BACKOFF_MULTIPLIER
-
+            # check if this is the last retry
             if delay >= MAX_WAIT_SECONDS:
-                logging.error(e.response["Error"]["Message"])
-                logging.error("Couldn't update function %s.", function_name)
+                # if so, max wait time has been exceeded, give up
+                logging.error(e.response["Error"]["Code"])
+                logging.error(
+                    "Couldn't update function %s, max retry time exceeded.",
+                    function_name,
+                )
                 raise
         else:
             logging.info(
@@ -127,7 +129,6 @@ def update_lambda_code(
                 response["FunctionArn"],
             )
             return response
-
 
 def add_permission(
     action: str, function_name: str, principal: str, source_arn: str, statement_id: str
